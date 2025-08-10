@@ -2,6 +2,11 @@
 
 Modern Bible reading & powerful multi‑mode search (all / any / phrase) with per‑book & per‑chapter statistics.
 
+## Live Demo
+
+https://dawei7.github.io/BibleReader_SmartSearch/
+
+
 ## Stack
 
 - Vite 7 (fast dev + build)
