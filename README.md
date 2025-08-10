@@ -6,7 +6,6 @@ Modern Bible reading & powerful multi‑mode search (all / any / phrase) with pe
 
 https://dawei7.github.io/BibleReader_SmartSearch/
 
-
 ## Stack
 
 - Vite 7 (fast dev + build)
@@ -192,5 +191,3 @@ npm run build
 - Import additional translations lazily.
 
 Enjoy & God bless! ✨
-
-
