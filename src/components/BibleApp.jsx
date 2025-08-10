@@ -67,6 +67,11 @@ export default function BibleApp(){
   // Base path (GitHub Pages subpath safe). Vite injects import.meta.env.BASE_URL
   // Normalize base (remove trailing slashes). Double escaping fixed.
   const BASE = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '/');
+  if (typeof window !== 'undefined') {
+    // One-time debug log of base path (remove once verified)
+    // eslint-disable-next-line no-console
+    console.info('[BibleApp] BASE_URL =', BASE, 'import.meta.env.BASE_URL =', import.meta.env.BASE_URL);
+  }
   const [bible,setBible]=useState(null);
   const [versions,setVersions]=useState([]);
   const [version,setVersion]=useState('');
