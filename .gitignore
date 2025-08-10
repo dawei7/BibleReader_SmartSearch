@@ -5,7 +5,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 pnpm-debug.log*
-package-lock.json
+# Keep lockfile for deterministic builds
 .env*
 
 # IDE / editor
@@ -17,8 +17,4 @@ Desktop.ini
 
 # Optional: remove if you want to commit local data transforms
 scripts/output/node_modules/
-dist/
-.DS_Store
-*.log
-*.lock
-vite.config.timestamp-*
+# duplicate patterns below trimmed
