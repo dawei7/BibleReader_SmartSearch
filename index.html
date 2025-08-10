@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
   <head>
+    <!-- Base tag added for GitHub Pages subpath deployment -->
+    <script>
+      (function(){
+        var isGH = location.hostname.endsWith('github.io');
+        if(isGH){
+          var base = document.createElement('base');
+          base.href = '/BibleReader_SmartSearch/';
+          document.head.appendChild(base);
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
