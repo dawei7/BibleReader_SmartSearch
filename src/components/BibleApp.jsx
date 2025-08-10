@@ -64,6 +64,9 @@ function highlightText(text, regexOrObj){
 }
 
 export default function BibleApp(){
+  // Base path (GitHub Pages subpath safe). Vite injects import.meta.env.BASE_URL
+  // Normalize base (remove trailing slashes). Double escaping fixed.
+  const BASE = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '/');
   const [bible,setBible]=useState(null);
   const [versions,setVersions]=useState([]);
   const [version,setVersion]=useState('');
@@ -114,7 +117,7 @@ export default function BibleApp(){
 
   async function attemptLoadAny(list){ for(const v of list){ const ok=await loadBibleVersion(v.abbreviation); if(ok) return true; } if(!bible){ setBible(SAMPLE_BIBLE); setVersion('sample'); } return false; }
 
-  useEffect(()=>{ let cancelled=false; (async()=>{ try { const res=await fetch('/bibles/index.json',{cache:'no-cache'}); if(!res.ok) throw new Error('index fetch'); const idx= await res.json(); if(cancelled) return; const flat = idx.flatMap(g=> g.versions.map(v=>({language:g.language,name:v.name,abbreviation:v.abbreviation}))); 
+  useEffect(()=>{ let cancelled=false; (async()=>{ try { const res=await fetch(`${BASE}bibles/index.json`,{cache:'no-cache'}); if(!res.ok) throw new Error('index fetch'); const idx= await res.json(); if(cancelled) return; const flat = idx.flatMap(g=> g.versions.map(v=>({language:g.language,name:v.name,abbreviation:v.abbreviation}))); 
         // Custom ordering: 1) Schlachter  2) King James  3) remaining alphabetical by name
         const priority = ['de_schlachter','en_kjv'];
         const picked = priority.map(abbr => flat.find(v=> v.abbreviation===abbr)).filter(Boolean);
@@ -132,7 +135,98 @@ export default function BibleApp(){
   function normalizeBible(data){ data.forEach(b=>{ if(!b.name) b.name = b.abbrev? String(b.abbrev).toUpperCase():'Unknown'; }); }
   function validateBibleStructure(raw){ return Array.isArray(raw) && raw.every(b=> b && typeof b==='object' && Array.isArray(b.chapters)); }
   function coerceBible(raw){ if(validateBibleStructure(raw)) return raw; if(raw && typeof raw==='object'){ const cand = raw.books || raw.bible || raw.data; if(validateBibleStructure(cand)) return cand; } throw new Error('Invalid JSON format'); }
-  async function loadBibleVersion(abbr){ if(!abbr) return false; if(bibleCacheRef.current[abbr]){ setBible(bibleCacheRef.current[abbr]); setVersion(abbr); setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0); setAttemptLog(l=>[...l,`cacheHit:${abbr}`].slice(-60)); return true; } setLastAttempt(abbr); setAttemptLog(l=>[...l,`try:${abbr}`].slice(-60)); setLoadingVersion(true); setVersionError(null); const myToken=++loadTokenRef.current; let data=null; try { try { const controller=new AbortController(); const to=setTimeout(()=>controller.abort(),FETCH_TIMEOUT_MS); let res; try { res=await fetch(`/bibles/${abbr}.json`,{cache:'no-cache',signal:controller.signal}); } finally { clearTimeout(to); } if(res?.ok){ setAttemptLog(l=>[...l,`status:${abbr}:200`].slice(-60)); const buf=await res.arrayBuffer(); const dec=new TextDecoder('utf-8'); let text=dec.decode(buf); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1); let raw; try { raw=JSON.parse(text); } catch { setAttemptLog(l=>[...l,`parseErr:${abbr}`].slice(-60)); throw new Error('JSON parse error'); } try { data=coerceBible(raw); } catch { setAttemptLog(l=>[...l,`structureErr:${abbr}`].slice(-60)); throw new Error('Structure error'); } } else if(res){ setAttemptLog(l=>[...l,`status:${abbr}:${res.status}`].slice(-60)); } } catch(fetchErr){ setAttemptLog(l=>[...l,`fetchErr:${abbr}`].slice(-60)); if(!versionError) setVersionError(String(fetchErr?.message||fetchErr)); } if(!data && lazyMode){ try { const metaRes=await fetch(`/bibles/${abbr}/meta.json`,{cache:'no-cache'}); if(metaRes.ok){ const meta=await metaRes.json(); setMetaMap(m=>({...m,[abbr]:meta})); setAttemptLog(l=>[...l,`meta:${abbr}`].slice(-60)); const first=meta.books?.[0]; if(first){ const bRes=await fetch(`/bibles/${abbr}/${first.file}`,{cache:'no-cache'}); if(bRes.ok){ const bRaw=await bRes.json(); const book={name:bRaw.name,abbrev:bRaw.abbrev,chapters:bRaw.chapters}; data=[book]; bookCache.current[`${abbr}:0`]=book; setAttemptLog(l=>[...l,`lazyFirstBook:${abbr}`].slice(-60)); } } } } catch {} } if(!data){ try { const mod=await import(`../../bibles/${abbr}.json`); data=coerceBible(mod.default); } catch {} } if(!data) throw new Error('No data loaded'); normalizeBible(data); if(loadTokenRef.current!==myToken){ setAttemptLog(l=>[...l,`staleDrop:${abbr}`].slice(-60)); return false; } setBible(data); setVersion(abbr); if(data.length>=3) bibleCacheRef.current[abbr]=data; setAttemptLog(l=>[...l,`success:${abbr}`].slice(-60)); setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0); return true; } catch(e){ setVersionError(`Error loading "${abbr}": ${e.message||e}`); setAttemptLog(l=>[...l,`fail:${abbr}`].slice(-60)); return false; } finally { setLoadingVersion(false); } }
+  async function loadBibleVersion(abbr){
+    if(!abbr) return false;
+    // Cache hit
+    if(bibleCacheRef.current[abbr]){
+      setBible(bibleCacheRef.current[abbr]);
+      setVersion(abbr);
+      setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0);
+      setAttemptLog(l=>[...l,`cacheHit:${abbr}`].slice(-60));
+      return true;
+    }
+    setLastAttempt(abbr);
+    setAttemptLog(l=>[...l,`try:${abbr}`].slice(-60));
+    setLoadingVersion(true);
+    setVersionError(null);
+    const myToken=++loadTokenRef.current;
+    let data=null;
+    try {
+      // Direct whole-bible JSON fetch
+      try {
+        const controller=new AbortController();
+        const to=setTimeout(()=>controller.abort(),FETCH_TIMEOUT_MS);
+        let res;
+        try {
+          res=await fetch(`${BASE}bibles/${abbr}.json`,{cache:'no-cache',signal:controller.signal});
+        } finally { clearTimeout(to); }
+        if(res?.ok){
+          setAttemptLog(l=>[...l,`status:${abbr}:200`].slice(-60));
+          const buf=await res.arrayBuffer();
+          const dec=new TextDecoder('utf-8');
+            let text=dec.decode(buf);
+            if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+            let raw;
+            try { raw=JSON.parse(text); }
+            catch { setAttemptLog(l=>[...l,`parseErr:${abbr}`].slice(-60)); throw new Error('JSON parse error'); }
+            try { data=coerceBible(raw); }
+            catch { setAttemptLog(l=>[...l,`structureErr:${abbr}`].slice(-60)); throw new Error('Structure error'); }
+        } else if(res){
+          setAttemptLog(l=>[...l,`status:${abbr}:${res.status}`].slice(-60));
+        }
+      } catch(fetchErr){
+        setAttemptLog(l=>[...l,`fetchErr:${abbr}`].slice(-60));
+        if(!versionError) setVersionError(String(fetchErr?.message||fetchErr));
+      }
+      // Lazy mode fallback (meta + first book)
+      if(!data && lazyMode){
+        try {
+          const metaRes=await fetch(`${BASE}bibles/${abbr}/meta.json`,{cache:'no-cache'});
+          if(metaRes.ok){
+            const meta=await metaRes.json();
+            setMetaMap(m=>({...m,[abbr]:meta}));
+            setAttemptLog(l=>[...l,`meta:${abbr}`].slice(-60));
+            const first=meta.books?.[0];
+            if(first){
+              const bRes=await fetch(`${BASE}bibles/${abbr}/${first.file}`,{cache:'no-cache'});
+              if(bRes.ok){
+                const bRaw=await bRes.json();
+                const book={name:bRaw.name,abbrev:bRaw.abbrev,chapters:bRaw.chapters};
+                data=[book];
+                bookCache.current[`${abbr}:0`]=book;
+                setAttemptLog(l=>[...l,`lazyFirstBook:${abbr}`].slice(-60));
+              }
+            }
+          }
+        } catch { /* ignore */ }
+      }
+      // Bundled import fallback
+      if(!data){
+        try {
+          const mod=await import(`../../bibles/${abbr}.json`);
+          data=coerceBible(mod.default);
+        } catch { /* ignore */ }
+      }
+      if(!data) throw new Error('No data loaded');
+      normalizeBible(data);
+      if(loadTokenRef.current!==myToken){
+        setAttemptLog(l=>[...l,`staleDrop:${abbr}`].slice(-60));
+        return false;
+      }
+      setBible(data);
+      setVersion(abbr);
+      if(data.length>=3) bibleCacheRef.current[abbr]=data;
+      setAttemptLog(l=>[...l,`success:${abbr}`].slice(-60));
+      setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0);
+      return true;
+    } catch(e){
+      setVersionError(`Error loading "${abbr}": ${e.message||e}`);
+      setAttemptLog(l=>[...l,`fail:${abbr}`].slice(-60));
+      return false;
+    } finally {
+      setLoadingVersion(false);
+    }
+  }
   const currentBook = bible?.[bookIdx]; const chapterCount=currentBook?.chapters.length || 0; const verseCount=currentBook?.chapters[chapterIdx]?.length || 0; const vEndEffective = vEnd===0? verseCount : clamp(vEnd,1,verseCount); const vStartEffective = clamp(vStart,1,vEndEffective); const searchObj = useMemo(()=> buildSearchRegex(query,searchMode,{caseSensitive}),[query,searchMode,caseSensitive]);
   useEffect(()=>{ const t=setTimeout(()=> setQuery(queryInput.trim()),500); return ()=> clearTimeout(t); },[queryInput]);
   const readVerses = useMemo(()=> !currentBook? []: (currentBook.chapters[chapterIdx]||[]).slice(vStartEffective-1,vEndEffective).map((t,i)=>({n:i+vStartEffective,text:t})),[currentBook,chapterIdx,vStartEffective,vEndEffective]);
