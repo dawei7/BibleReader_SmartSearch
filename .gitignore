@@ -1,0 +1,24 @@
+node_modules/
+dist/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+pnpm-debug.log*
+package-lock.json
+.env*
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Mac / Windows cruft
+Desktop.ini
+
+# Optional: remove if you want to commit local data transforms
+scripts/output/node_modules/
+dist/
+.DS_Store
+*.log
+*.lock
+vite.config.timestamp-*

@@ -1,0 +1,97 @@
+[
+  {
+    "file": "ar_svd.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "de_schlachter.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "el_greek.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "en_bbe.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "en_kjv.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "eo_esperanto.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "es_rvr.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "fi_finnish.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "fi_pr.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "fr_apee.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "ko_ko.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "pt_aa.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "pt_acf.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "pt_nvi.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "ro_cornilescu.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "ru_synodal.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "vi_vietnamese.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "zh_cuv.json",
+    "status": "fixed",
+    "books": 66
+  },
+  {
+    "file": "zh_ncv.json",
+    "status": "fixed",
+    "books": 66
+  }
+]
