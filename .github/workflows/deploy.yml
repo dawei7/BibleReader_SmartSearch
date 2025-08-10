@@ -27,12 +27,12 @@ jobs:
           cache: "npm"
       - name: Install deps
         run: npm ci
-      - name: Build
+      - name: Set build env
         run: |
           echo "GHPAGES=1" >> $GITHUB_ENV
-          # Derive repo name (strip owner) for Vite base path
           echo "VITE_REPO_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
-          npm run build
+      - name: Build
+        run: npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
