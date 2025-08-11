@@ -273,8 +273,29 @@ export default function BibleApp(){
   const [showScrollTop,setShowScrollTop]=useState(false);
   const headerRef = useRef(null);
   const panelRef = useRef(null);
+  // Mobile-only staged controls state
+  const [mVersion,setMVersion] = useState('');
+  const [mBookIdx,setMBookIdx] = useState(0);
+  const [mChapterIdx,setMChapterIdx] = useState(0);
+  const [mVStart,setMVStart] = useState(1);
+  const [mVEnd,setMVEnd] = useState(0);
+  const [mQuery,setMQuery] = useState('');
+  const [mSearchScope,setMSearchScope] = useState('all');
+  const [mChapFrom,setMChapFrom] = useState(1);
+  const [mChapTo,setMChapTo] = useState(0);
+  const [mSearchMode,setMSearchMode] = useState('all');
+  const [mCaseSensitive,setMCaseSensitive] = useState(false);
+  const mobileChapterRef = useRef(null);
+  const [showVersionPicker,setShowVersionPicker] = useState(false);
+  const [tempVersion,setTempVersion] = useState('');
+  const [showBookPicker,setShowBookPicker] = useState(false);
+  const [showChapterPicker,setShowChapterPicker] = useState(false);
+  const [tempBookIdx,setTempBookIdx] = useState(0);
+  const [tempChapterIdx,setTempChapterIdx] = useState(0);
+  const bottomBarRef = useRef(null);
   const [headerHeight,setHeaderHeight]=useState(72); // fallback
   const [panelHeight,setPanelHeight]=useState(0);
+  const [bottomBarH,setBottomBarH]=useState(52);
   const caseSensitiveRef = useRef(null);
 
   // measure header + panel sizes for dynamic spacing on mobile
@@ -311,12 +332,52 @@ export default function BibleApp(){
     window.addEventListener('resize',handleResize);
     return ()=> window.removeEventListener('resize',handleResize);
   },[]);
+  // measure bottom bar height for sheet offset
+  useEffect(()=>{
+    function measureBar(){ if(bottomBarRef.current){ const h = bottomBarRef.current.offsetHeight || 52; setBottomBarH(h); } }
+    measureBar();
+    window.addEventListener('resize',measureBar);
+    return ()=> window.removeEventListener('resize',measureBar);
+  },[]);
+  // Sync mobile staged state when opening controls
+  useEffect(()=>{
+    if(!showControls) return;
+    if(mode==='read'){
+      setMVersion(version);
+      setMBookIdx(bookIdx);
+      setMChapterIdx(chapterIdx);
+      setMVStart(vStart);
+      setMVEnd(vEnd);
+    } else {
+      setMVersion(version);
+      setMQuery(queryInput);
+      setMSearchMode(searchMode);
+      setMSearchScope(searchScope);
+      setMBookIdx(bookIdx);
+      setMChapFrom(chapFrom);
+      setMChapTo(chapTo);
+      setMCaseSensitive(caseSensitive);
+    }
+  },[showControls,mode,version,bookIdx,chapterIdx,vStart,vEnd,queryInput,searchMode,searchScope,chapFrom,chapTo,caseSensitive]);
   useEffect(()=>{
     function onScroll(){ setShowScrollTop(window.scrollY > 400); }
     window.addEventListener('scroll',onScroll,{passive:true});
     onScroll();
     return ()=> window.removeEventListener('scroll',onScroll);
   },[]);
+  // Lock background scroll when full-screen mobile controls open
+  useEffect(()=>{
+    if(!isMobile) return; // only mobile overlay needs lock
+    const body = document.body;
+    if(showControls){
+      const prev = body.style.overflow;
+      body.dataset._prevOverflow = prev;
+      body.style.overflow='hidden';
+    } else if(body.dataset._prevOverflow!==undefined){
+      body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow;
+    }
+    return ()=>{ if(body.dataset._prevOverflow!==undefined){ body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow; } };
+  },[showControls,isMobile]);
   // Selections cleared inline when version or search input changes; also defensively here if query/version changed elsewhere
   useEffect(()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} },[queryInput,version]);
   const chapterBreakdown = useMemo(()=>{ if(searchResults.exceeded) return []; if(selectedBooks.length!==1) return []; const b=selectedBooks[0]; return Object.entries(searchResults.perChap).filter(([k])=> k.startsWith(b+" ")).map(([k,c])=>({ name:k.substring(b.length+1), count:c })).sort((a,b)=> parseInt(a.name)-parseInt(b.name)); },[selectedBooks,searchResults]);
@@ -326,10 +387,73 @@ export default function BibleApp(){
   function resetSelections(){ setSelectedBooks([]); setSelectedChapters([]); }
   function onSelectBook(i){ setBookIdx(i); setChapterIdx(0); setVStart(1); setVEnd(0); }
   function jumpTo(book, chapter, verse){ if(!bible) return; const idx=bible.findIndex(b=>b.name===book || b.abbrev===book); if(idx>=0){ setBookIdx(idx); setChapterIdx(chapter-1); setVStart(verse); setVEnd(0); setMode('read'); window.scrollTo({top:0,behavior:'smooth'}); } }
+  // Derived counts for mobile staged selection
+  const mChapterCount = bible?.[mBookIdx]?.chapters.length || 0;
+  const mVerseCount = bible?.[mBookIdx]?.chapters?.[mChapterIdx]?.length || 0;
+  // Group versions by language for mobile reading controls
+  const versionsByLanguage = useMemo(()=>{
+    const map = new Map();
+    versions.forEach(v=>{
+      if(!map.has(v.language)) map.set(v.language, []);
+      map.get(v.language).push(v);
+    });
+    // Sort languages alphabetically; keep existing order of versions within each language
+    return Array.from(map.entries()).sort((a,b)=> a[0].localeCompare(b[0]));
+  },[versions]);
+  const currentVersionObj = useMemo(()=> versions.find(v=> v.abbreviation === (mVersion||version)) || null,[versions,mVersion,version]);
+  function openVersionPicker(){ setTempVersion(mVersion||version); setShowVersionPicker(true); }
+  function applyVersionPicker(){ if(tempVersion) setMVersion(tempVersion); setShowVersionPicker(false); }
+  function openBookPicker(){
+    setTempBookIdx(mBookIdx);
+    // Reset chapter temp when switching books inside picker
+    setTempChapterIdx(0);
+    setShowBookPicker(true);
+  }
+  function openChapterPicker(){
+    setTempChapterIdx(mChapterIdx);
+    setShowChapterPicker(true);
+  }
+  function applyBookPicker(){ setMBookIdx(tempBookIdx); setMChapterIdx(0); setMVStart(1); setMVEnd(0); setShowBookPicker(false); }
+  function applyChapterPicker(){ setMChapterIdx(tempChapterIdx); setMVStart(1); setMVEnd(0); setShowChapterPicker(false); }
+  // Apply handlers for mobile
+  function applyRead(){
+    const commit = ()=>{
+      setBookIdx(mBookIdx);
+      setChapterIdx(mChapterIdx);
+      setVStart(mVStart);
+      setVEnd(mVEnd);
+      setShowControls(false);
+    };
+    if(mVersion && mVersion!==version){
+      loadBibleVersion(mVersion).then(()=> commit());
+    } else {
+      commit();
+    }
+  }
+  function applySearch(){
+    const commit = ()=>{
+      setSearchMode(mSearchMode);
+      setSearchScope(mSearchScope);
+      setBookIdx(mBookIdx);
+      setChapFrom(mChapFrom);
+      setChapTo(mChapTo);
+      setCaseSensitive(mCaseSensitive);
+      // Set both input and effective query immediately
+      setQuery(mQuery?.trim()||'');
+      setQueryInput(mQuery||'');
+      setShowControls(false);
+    };
+    if(mVersion && mVersion!==version){
+      loadBibleVersion(mVersion).then(()=> commit());
+    } else {
+      commit();
+    }
+  }
   if(!bible){ return (<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 to-slate-100 p-6 text-slate-900"><div className="text-center space-y-4 max-w-md"><div><div className="text-2xl font-semibold">Loading Bible…</div><div className="mt-2 text-sm opacity-70">Attempting to load available versions</div></div>{versionError && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{versionError}</div>}<div className="text-left text-[10px] leading-relaxed font-mono max-h-40 overflow-auto bg-slate-900/90 text-slate-200 rounded p-2"><div className="opacity-70">Debug</div><div>versions: {versions.map(v=>v.abbreviation).join(', ') || '—'}</div><div>last: {lastAttempt||'—'}</div>{attemptLog.slice(-10).map((l,i)=><div key={i}>{l}</div>)}</div>{loadingVersion && <div className="text-xs text-slate-500">Loading…</div>}<div className="text-xs text-slate-500">JSON files must reside under <code className="px-1 bg-slate-200 rounded">public/bibles</code>.</div><div><button onClick={()=> versions.length && attemptLoadAny(versions)} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white text-sm font-medium px-5 py-2.5 shadow">Retry</button><button onClick={()=> setLazyMode(l=>!l)} className="inline-flex ml-2 items-center gap-2 rounded-xl bg-slate-100 border border-slate-300 text-xs px-3 py-2">LazyMode: {lazyMode? 'ON':'OFF'}</button></div></div></div>); }
   const currentYear = new Date().getFullYear();
   // Dynamic padding top: header + panel (if visible)
-  let dynamicPadTop = isMobile ? headerHeight + 12 : 12;
+  // Mobile: no extra top padding needed; sticky header occupies layout space
+  let dynamicPadTop = isMobile ? 0 : 12;
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-slate-50 to-zinc-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors">
   <header ref={headerRef} className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm">
@@ -612,78 +736,75 @@ export default function BibleApp(){
       </main>
 
       {/* Mobile bottom bar: only Controls */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+  <div ref={bottomBarRef} className={classNames('md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur pb-[env(safe-area-inset-bottom)] transition-opacity duration-150', showControls && 'opacity-0 pointer-events-none')}>
         <div className="mx-auto max-w-7xl px-3 py-2 grid grid-cols-1">
           <div className="flex justify-center">
-            <button aria-expanded={showControls} onClick={()=> setShowControls(v=>!v)} className={classNames('rounded-lg px-4 py-2 border text-sm', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600', showControls && 'ring-1 ring-slate-400/50 dark:ring-slate-500/50')}>{showControls? 'Close':'Controls'}</button>
+            <button aria-expanded={showControls} onClick={()=> setShowControls(v=>!v)} className={classNames('rounded-lg px-4 py-2 border text-sm', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600', showControls && 'ring-1 ring-slate-400/50 dark:ring-slate-500/50')}>Controls</button>
           </div>
         </div>
       </div>
 
       {/* Mobile bottom-sheet controls */}
       {isMobile && (
-        <div className={classNames('sm:hidden fixed inset-x-0 z-50 transition-transform duration-200', showControls? 'bottom-0':'-bottom-[80vh]')}>
-          <div className="mx-auto max-w-7xl px-3 pb-3">
-            <div className="rounded-t-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                <div className="text-sm font-semibold">{mode==='read'? 'Reading Controls':'Search Controls'}</div>
-                <button className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600" onClick={()=> setShowControls(false)}>Close</button>
+  <div
+    className={classNames(
+      'md:hidden fixed inset-0 z-50 transition-transform duration-200 transform',
+      showControls ? 'translate-y-0 pointer-events-auto' : 'translate-y-full pointer-events-none'
+    )}
+    aria-hidden={!showControls}
+  >
+          <div className="w-full h-full bg-white dark:bg-slate-900 pb-[calc(env(safe-area-inset-bottom,0px))] flex flex-col">
+            <div className="flex flex-col h-full overflow-hidden">
+              <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">{mode==='read'? 'Reading Controls':'Search Controls'}</div>
+                  <button className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" onClick={()=> setShowControls(false)}>Close</button>
+                </div>
               </div>
-              <div ref={panelRef} className="max-h-[70vh] overflow-y-auto px-4 py-3">
+              <div ref={panelRef} className="flex-1 overflow-y-auto px-4 py-4">
                 {mode==='read' ? (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible</label>
-                      <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                        {versions.map(v=> (
-                          <button
-                            key={v.abbreviation}
-                            disabled={loadingVersion}
-                            onClick={()=> loadBibleVersion(v.abbreviation)}
-                            className={classNames(
-                              'whitespace-nowrap px-3 py-1.5 rounded-lg border text-xs',
-                              version===v.abbreviation ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
-                            )}
-                          >{v.name}</button>
-                        ))}
-                        {version==='sample' && (
-                          <button className={classNames('whitespace-nowrap px-3 py-1.5 rounded-lg border text-xs', 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600')}>Sample</button>
-                        )}
-                      </div>
-                      {loadingVersion && <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Loading…</div>}
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible Version</label>
+                      <button onClick={openVersionPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
+                        <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{currentVersionObj? currentVersionObj.name : (mVersion||version)}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
+                      </button>
                       {versionError && <div className="mt-1 text-[11px] text-red-600">{versionError}</div>}
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Book</label>
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {(bible ?? []).map((b,i)=>{
-                          const ab = (b.abbrev && String(b.abbrev)) || bookAbbrev(b.name, b.abbrev);
-                          const active = i===bookIdx;
-                          return (
-                            <button key={b.name+i} onClick={()=> onSelectBook(i)} className={classNames('h-9 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
-                          );
-                        })}
-                      </div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
+                      <button onClick={openBookPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between"><span className="font-medium text-slate-700 dark:text-slate-200 truncate">{(bible?.[mBookIdx]?.name)||'—'}</span><span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span></button>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Chapter</label>
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {Array.from({length: chapterCount||0}, (_,n)=> n+1).map(n=> (
-                          <button key={n} onClick={()=> setChapterIdx(n-1)} className={classNames('h-9 rounded-md text-[11px] font-semibold border', n===chapterIdx+1? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{n}</button>
-                        ))}
-                      </div>
-                      <div className="mt-2 text-[11px] text-slate-600 dark:text-slate-400">Verses in chapter: {verseCount||0}</div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter</label>
+                      <button onClick={openChapterPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between"><span className="font-medium text-slate-700 dark:text-slate-200 truncate">{mChapterCount? (mChapterIdx+1): '—'}</span><span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span></button>
+                      <div className="mt-2 text-[11px] text-slate-600 dark:text-slate-400">Verses in chapter: {mVerseCount||0}</div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verse from</label>
-                        <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={verseCount||1} value={vStart} onChange={e=> setVStart(parseInt(e.target.value)||1)} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verse to (0=end)</label>
-                        <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={verseCount||1} value={vEnd} onChange={e=> setVEnd(parseInt(e.target.value)||0)} />
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verse Range (drag handles)</label>
+                        {/* Inputs removed; slider below */}
                       </div>
                     </div>
+                    {mVerseCount > 1 && (
+                      <div className="pt-2 space-y-2">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                          <span>Range: <span className="font-medium text-slate-700 dark:text-slate-200">{mVStart}</span></span>
+                          <span>to <span className="font-medium text-slate-700 dark:text-slate-200">{mVEnd===0? mVerseCount || 1 : mVEnd}</span>{mVEnd===0 && ' (end)'} </span>
+                        </div>
+                        <div className="relative h-10 flex items-center">
+                          {/* Dual range slider */}
+                          {(()=>{ const endVal = mVEnd===0? mVerseCount || 1 : mVEnd; return (
+                            <>
+                              <input type="range" min={1} max={mVerseCount||1} value={mVStart} onChange={e=>{ const v=parseInt(e.target.value)||1; const end=endVal; if(v>=end){ if(end< (mVerseCount||1)) { setMVStart(v); setMVEnd(end); } else { setMVStart(end-1>0? end-1:1); } } else setMVStart(v); }} className="absolute inset-0 w-full opacity-70 cursor-pointer" />
+                              <input type="range" min={1} max={mVerseCount||1} value={endVal} onChange={e=>{ let v=parseInt(e.target.value)||1; if(v<=mVStart){ v=mVStart+1; } if(v> (mVerseCount||1)) v=(mVerseCount||1); setMVEnd(v=== (mVerseCount||1)? 0 : v); }} className="absolute inset-0 w-full opacity-70 cursor-pointer pointer-events-auto" />
+                            </>
+                          ); })()}
+                          <div className="absolute left-0 right-0 h-1 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                        </div>
+                      </div>
+                    )}
                     {/* No Search/Statistics buttons here; kept in top bar */}
                   </div>
                 ) : (
@@ -695,10 +816,10 @@ export default function BibleApp(){
                           <button
                             key={v.abbreviation}
                             disabled={loadingVersion}
-                            onClick={()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} loadBibleVersion(v.abbreviation); }}
+                            onClick={()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} setMVersion(v.abbreviation); }}
                             className={classNames(
                               'whitespace-nowrap px-3 py-1.5 rounded-lg border text-xs',
-                              version===v.abbreviation ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                              (mVersion||version)===v.abbreviation ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
                             )}
                           >{v.name}</button>
                         ))}
@@ -709,27 +830,30 @@ export default function BibleApp(){
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Search term(s)</label>
-                      <input value={queryInput} onChange={e=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} setQueryInput(e.target.value); }} className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" placeholder="e.g. light" />
+                      <div className="flex items-center gap-2">
+                        <input value={mQuery} onChange={e=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} setMQuery(e.target.value); }} className="flex-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" placeholder="e.g. light" />
+                        <button className="rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 transition-colors" onClick={applySearch}>Apply</button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs font-medium">
                       {[{key:'all',label:'All words'},{key:'any',label:'Any'},{key:'phrase',label:'Phrase'}].map(o=> (
-                        <button key={o.key} onClick={()=>setSearchMode(o.key)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchMode===o.key? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
+                        <button key={o.key} onClick={()=>setMSearchMode(o.key)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', mSearchMode===o.key? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
                       ))}
                     </div>
                     <div className="text-xs font-medium grid grid-cols-2 gap-2">
-                      <button onClick={()=>setSearchScope('all')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchScope==='all'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Whole Bible</button>
-                      <button onClick={()=>setSearchScope('book')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchScope==='book'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>This Book</button>
+                      <button onClick={()=>setMSearchScope('all')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', mSearchScope==='all'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Whole Bible</button>
+                      <button onClick={()=>setMSearchScope('book')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', mSearchScope==='book'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>This Book</button>
                     </div>
-                    {searchScope==='book' && (
+                    {mSearchScope==='book' && (
                       <div className="space-y-3">
                         <div>
                           <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Book</label>
                           <div className="grid grid-cols-6 gap-1.5">
                             {(bible ?? []).map((b,i)=>{
                               const ab = (b.abbrev && String(b.abbrev)) || bookAbbrev(b.name, b.abbrev);
-                              const active = i===bookIdx;
+                              const active = i===mBookIdx;
                               return (
-                                <button key={b.name+i} onClick={()=> onSelectBook(i)} className={classNames('h-9 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
+                                <button key={b.name+i} onClick={()=> { setMBookIdx(i); }} className={classNames('h-9 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
                               );
                             })}
                           </div>
@@ -737,17 +861,17 @@ export default function BibleApp(){
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter from</label>
-                            <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={(bible?.[bookIdx]?.chapters.length)||1} value={chapFrom} onChange={e=> setChapFrom(parseInt(e.target.value)||1)} />
+                            <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={(bible?.[mBookIdx]?.chapters.length)||1} value={mChapFrom} onChange={e=> setMChapFrom(parseInt(e.target.value)||1)} />
                           </div>
                           <div>
                             <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter to (0=end)</label>
-                            <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={(bible?.[bookIdx]?.chapters.length)||1} value={chapTo} onChange={e=> setChapTo(parseInt(e.target.value)||0)} />
+                            <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={(bible?.[mBookIdx]?.chapters.length)||1} value={mChapTo} onChange={e=> setMChapTo(parseInt(e.target.value)||0)} />
                           </div>
                         </div>
                       </div>
                     )}
                     <div className="flex items-center justify-between gap-4 text-xs">
-                      <label className="inline-flex items-center gap-1"><input type="checkbox" checked={caseSensitive} onChange={e=>setCaseSensitive(e.target.checked)} /> Case sensitive</label>
+                      <label className="inline-flex items-center gap-1"><input type="checkbox" checked={mCaseSensitive} onChange={e=>setMCaseSensitive(e.target.checked)} /> Case sensitive</label>
                       {(selectedBooks.length||selectedChapters.length) && (
                         <button className="text-blue-600 dark:text-blue-400 underline decoration-dotted underline-offset-2" onClick={resetSelections}>Clear selection</button>
                       )}
@@ -756,9 +880,84 @@ export default function BibleApp(){
                   </div>
                 )}
               </div>
-              <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800">
-                <button className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5" onClick={()=> setShowControls(false)}>Apply</button>
-              </div>
+              {mode==='read' && (
+                <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                  <button className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5" onClick={applyRead}>Apply</button>
+                </div>
+              )}
+              {/* Version Picker Overlay */}
+              {showVersionPicker && (
+                <div className="absolute inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+                  <div className="sticky top-0 px-4 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
+                    <div className="text-sm font-semibold tracking-wide">Select Version</div>
+                    <button onClick={()=> setShowVersionPicker(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+                    {versionsByLanguage.map(([lang,list])=> (
+                      <div key={lang} className="space-y-2">
+                        <div className="text-[10px] uppercase tracking-wide font-semibold text-slate-500 dark:text-slate-400">{lang}</div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {list.map(v=> {
+                            const active = tempVersion===v.abbreviation;
+                            return (
+                              <button key={v.abbreviation} onClick={()=> setTempVersion(v.abbreviation)} className={classNames('px-2 py-2 rounded-md border text-[11px] font-medium leading-tight', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{v.name}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    {version==='sample' && (
+                      <div className="space-y-2">
+                        <div className="text-[10px] uppercase tracking-wide font-semibold text-slate-500 dark:text-slate-400">Sample</div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button onClick={()=> setTempVersion('sample')} className={classNames('px-2 py-2 rounded-md border text-[11px] font-medium leading-tight', tempVersion==='sample'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Sample</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex">
+                    <button onClick={applyVersionPicker} disabled={!tempVersion} className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 disabled:opacity-50">Apply</button>
+                  </div>
+                </div>
+              )}
+              {/* Book Picker Overlay */}
+              {showBookPicker && (
+                <div className="absolute inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+                  <div className="sticky top-0 px-4 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
+                    <div className="text-sm font-semibold tracking-wide">Select Book</div>
+                    <button onClick={()=> setShowBookPicker(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-4 py-4">
+                    <div className="grid grid-cols-6 gap-2">
+                      {(bible ?? []).map((b,i)=>{ const ab=(b.abbrev && String(b.abbrev)) || bookAbbrev(b.name,b.abbrev); const active=i===tempBookIdx; return (
+                        <button key={b.name+i} onClick={()=>{ setTempBookIdx(i); setTempChapterIdx(0); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
+                      ); })}
+                    </div>
+                  </div>
+                  <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex">
+                    <button onClick={applyBookPicker} className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5">Apply</button>
+                  </div>
+                </div>
+              )}
+              {/* Chapter Picker Overlay */}
+              {showChapterPicker && (
+                <div className="absolute inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+                  <div className="sticky top-0 px-4 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
+                    <div className="text-sm font-semibold tracking-wide">Select Chapter</div>
+                    <button onClick={()=> setShowChapterPicker(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-4 py-4">
+                    <div className="grid grid-cols-6 gap-2">
+                      {Array.from({length: mChapterCount||0}, (_,n)=> n+1).map(n=> { const active = n===tempChapterIdx+1; return (
+                        <button key={n} onClick={()=>{ setTempChapterIdx(n-1); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{n}</button>
+                      ); })}
+                    </div>
+                  </div>
+                  <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex">
+                    <button onClick={applyChapterPicker} className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5">Apply</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
