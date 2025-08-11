@@ -205,13 +205,7 @@ export default function BibleApp(){
           }
         } catch { /* ignore */ }
       }
-      // Bundled import fallback
-      if(!data){
-        try {
-          const mod=await import(`../../bibles/${abbr}.json`);
-          data=coerceBible(mod.default);
-        } catch { /* ignore */ }
-      }
+  // Bundled import fallback removed to avoid dynamic import issues in dev.
       if(!data) throw new Error('No data loaded');
       normalizeBible(data);
       if(loadTokenRef.current!==myToken){
