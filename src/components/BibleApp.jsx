@@ -251,8 +251,7 @@ export default function BibleApp(){
   const [selectedBooks,setSelectedBooks]=useState([]); const [selectedChapters,setSelectedChapters]=useState([]);
   // Mobile behavior ----------------------------------------------------
   const [isMobile,setIsMobile]=useState(false);
-  const [showControls,setShowControls]=useState(true); // whether panel is rendered (mobile)
-  const [autoVisible,setAutoVisible]=useState(true); // true if visibility due to being at top
+  const [showControls,setShowControls]=useState(false); // bottom-sheet visibility on mobile
   const [showScrollTop,setShowScrollTop]=useState(false);
   const headerRef = useRef(null);
   const panelRef = useRef(null);
@@ -273,9 +272,9 @@ export default function BibleApp(){
     if(ro && panelRef.current) ro.observe(panelRef.current);
     return ()=>{ window.removeEventListener('resize',measure); ro?.disconnect(); };
   },[mode,isMobile]);
-  // Measure whenever controls become visible
+  // Measure whenever controls become visible (desktop sidebar only)
   useEffect(()=>{
-    if(!isMobile) return;
+    if(isMobile) return;
     if(showControls && panelRef.current){
       const h = panelRef.current.offsetHeight || panelRef.current.scrollHeight || 0;
       if(h>0) setPanelHeight(h);
@@ -295,28 +294,11 @@ export default function BibleApp(){
     return ()=> window.removeEventListener('resize',handleResize);
   },[]);
   useEffect(()=>{
-    if(!isMobile){ setShowControls(true); setAutoVisible(true); setShowScrollTop(false); return; }
-    let lastTop = true;
-    function onScroll(){
-      const y = window.scrollY;
-      const atTop = y <= 4;
-      setShowScrollTop(y>400);
-      if(atTop){
-        if(!showControls){ setShowControls(true); }
-        if(!autoVisible){ setAutoVisible(true); }
-      } else {
-        if(autoVisible && showControls){
-          // was only visible because at top; hide now
-            setShowControls(false);
-            setAutoVisible(false);
-        }
-      }
-      lastTop = atTop;
-    }
+    function onScroll(){ setShowScrollTop(window.scrollY > 400); }
     window.addEventListener('scroll',onScroll,{passive:true});
     onScroll();
     return ()=> window.removeEventListener('scroll',onScroll);
-  },[isMobile, autoVisible, showControls]);
+  },[]);
   // Selections cleared inline when version or search input changes; also defensively here if query/version changed elsewhere
   useEffect(()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} },[queryInput,version]);
   const chapterBreakdown = useMemo(()=>{ if(searchResults.exceeded) return []; if(selectedBooks.length!==1) return []; const b=selectedBooks[0]; return Object.entries(searchResults.perChap).filter(([k])=> k.startsWith(b+" ")).map(([k,c])=>({ name:k.substring(b.length+1), count:c })).sort((a,b)=> parseInt(a.name)-parseInt(b.name)); },[selectedBooks,searchResults]);
@@ -329,7 +311,7 @@ export default function BibleApp(){
   if(!bible){ return (<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 to-slate-100 p-6 text-slate-900"><div className="text-center space-y-4 max-w-md"><div><div className="text-2xl font-semibold">Loading Bible…</div><div className="mt-2 text-sm opacity-70">Attempting to load available versions</div></div>{versionError && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{versionError}</div>}<div className="text-left text-[10px] leading-relaxed font-mono max-h-40 overflow-auto bg-slate-900/90 text-slate-200 rounded p-2"><div className="opacity-70">Debug</div><div>versions: {versions.map(v=>v.abbreviation).join(', ') || '—'}</div><div>last: {lastAttempt||'—'}</div>{attemptLog.slice(-10).map((l,i)=><div key={i}>{l}</div>)}</div>{loadingVersion && <div className="text-xs text-slate-500">Loading…</div>}<div className="text-xs text-slate-500">JSON files must reside under <code className="px-1 bg-slate-200 rounded">public/bibles</code>.</div><div><button onClick={()=> versions.length && attemptLoadAny(versions)} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white text-sm font-medium px-5 py-2.5 shadow">Retry</button><button onClick={()=> setLazyMode(l=>!l)} className="inline-flex ml-2 items-center gap-2 rounded-xl bg-slate-100 border border-slate-300 text-xs px-3 py-2">LazyMode: {lazyMode? 'ON':'OFF'}</button></div></div></div>); }
   const currentYear = new Date().getFullYear();
   // Dynamic padding top: header + panel (if visible)
-  let dynamicPadTop = isMobile ? headerHeight + (showControls && panelHeight ? panelHeight + 16 : 12) : 12;
+  let dynamicPadTop = isMobile ? headerHeight + 12 : 12;
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-slate-50 to-zinc-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors">
   <header ref={headerRef} className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm">
@@ -353,12 +335,7 @@ export default function BibleApp(){
                 >{t==='read'? 'Read':'Search'}</button>
               ))}
             </nav>
-            {isMobile && (
-              <button
-                onClick={()=>{ setShowControls(v=>{ if(v){ setAutoVisible(false); } return !v; }); if(!showControls){ setPanelHeight(0); }}}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm"
-              >{showControls? 'Hide Controls':'Show Controls'}</button>
-            )}
+            {/* Mobile controls toggle now in bottom tab bar */}
             <button
               onClick={()=> setTheme(th=> th==='dark'?'light':'dark')}
               aria-label="Toggle dark mode"
@@ -371,24 +348,24 @@ export default function BibleApp(){
         </div>
       </header>
 
-      <main
+  <main
         className="flex-1 mx-auto max-w-7xl px-4 pb-36 grid grid-cols-1 lg:grid-cols-12 gap-6 transition-[padding]"
         style={isMobile? { paddingTop: dynamicPadTop } : { paddingTop: 12 }}
       >
-        {(!isMobile || showControls) && (
+        {!isMobile && (
         <aside
           className={classNames(
             'lg:col-span-4 xl:col-span-3 z-40',
-            isMobile ? 'fixed left-0 right-0 px-4' : 'sticky top-[72px] self-start h-fit'
+            'sticky top-[72px] self-start h-fit'
           )}
-          style={isMobile? { top: headerHeight }: undefined}
+          
         >
           <motion.div
             ref={panelRef}
             layout
             className={classNames(
               'rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/100 dark:bg-slate-900/90 px-4 pt-6 pb-4 shadow-lg backdrop-blur-sm transition-colors',
-              isMobile ? 'max-h-[70vh] overflow-y-auto overflow-x-hidden' : 'max-h-[calc(100vh-7rem)] overflow-y-auto'
+              'max-h-[calc(100vh-7rem)] overflow-y-auto'
             )}
             initial={{opacity:0,y:10}}
             animate={{opacity:1,y:0}}
@@ -616,9 +593,119 @@ export default function BibleApp(){
         </section>
       </main>
 
+      {/* Mobile bottom tab bar */}
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-3 py-2 grid grid-cols-3 gap-2">
+          <button onClick={()=>setMode('read')} className={classNames('rounded-lg px-3 py-2 border text-sm', mode==='read'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Read</button>
+          <button onClick={()=>setMode('search')} className={classNames('rounded-lg px-3 py-2 border text-sm', mode==='search'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Search</button>
+          <button onClick={()=> setShowControls(v=>!v)} className="rounded-lg px-3 py-2 border text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600">Controls</button>
+        </div>
+      </div>
+
+      {/* Mobile bottom-sheet controls */}
+      {isMobile && (
+        <div className={classNames('sm:hidden fixed inset-x-0 z-50 transition-transform duration-200', showControls? 'bottom-0':'-bottom-[80vh]')}>
+          <div className="mx-auto max-w-7xl px-3 pb-3">
+            <div className="rounded-t-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="text-sm font-semibold">{mode==='read'? 'Reading Controls':'Search Controls'}</div>
+                <button className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600" onClick={()=> setShowControls(false)}>Close</button>
+              </div>
+              <div ref={panelRef} className="max-h-[70vh] overflow-y-auto px-4 py-3">
+                {mode==='read' ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible</label>
+                      <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={version} onChange={e=>loadBibleVersion(e.target.value)} disabled={loadingVersion}>
+                        {versions.map(v=> <option key={v.abbreviation} value={v.abbreviation}>{v.name} ({v.language})</option>)}
+                        {version==='sample' && <option value="sample">Sample</option>}
+                      </select>
+                      {loadingVersion && <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Loading…</div>}
+                      {versionError && <div className="mt-1 text-[11px] text-red-600">{versionError}</div>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
+                      <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={bookIdx} onChange={e=>onSelectBook(parseInt(e.target.value))}>
+                        {(bible ?? []).map((b,i)=><option key={b.name+i} value={i}>{b.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter</label>
+                        <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={chapterCount||1} value={chapterIdx+1} onChange={e=> setChapterIdx(clamp((parseInt(e.target.value)||1)-1,0,(chapterCount||1)-1))} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verses</label>
+                        <div className="text-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">{verseCount||0}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verse from</label>
+                        <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={verseCount||1} value={vStart} onChange={e=> setVStart(parseInt(e.target.value)||1)} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verse to (0=end)</label>
+                        <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={verseCount||1} value={vEnd} onChange={e=> setVEnd(parseInt(e.target.value)||0)} />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible / Version</label>
+                      <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={version} onChange={e=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} loadBibleVersion(e.target.value); }} disabled={loadingVersion}>
+                        {versions.map(v=> <option key={v.abbreviation} value={v.abbreviation}>{v.name} ({v.language})</option>)}
+                        {version==='sample' && <option value="sample">Sample</option>}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Search term(s)</label>
+                      <input value={queryInput} onChange={e=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} setQueryInput(e.target.value); }} className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" placeholder="e.g. light" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+                      {[{key:'all',label:'All'},{key:'any',label:'Any'},{key:'phrase',label:'Phrase'}].map(o=> (
+                        <button key={o.key} onClick={()=>setSearchMode(o.key)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchMode===o.key? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
+                      ))}
+                    </div>
+                    <div className="text-xs font-medium grid grid-cols-2 gap-2">
+                      <button onClick={()=>setSearchScope('all')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchScope==='all'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Whole Bible</button>
+                      <button onClick={()=>setSearchScope('book')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchScope==='book'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>This Book</button>
+                    </div>
+                    {searchScope==='book' && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
+                          <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={bookIdx} onChange={e=>onSelectBook(parseInt(e.target.value))}>
+                            {(bible ?? []).map((b,i)=><option key={b.name+i} value={i}>{b.name}</option>)}
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter from</label>
+                            <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={(bible?.[bookIdx]?.chapters.length)||1} value={chapFrom} onChange={e=> setChapFrom(parseInt(e.target.value)||1)} />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter to (0=end)</label>
+                            <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={(bible?.[bookIdx]?.chapters.length)||1} value={chapTo} onChange={e=> setChapTo(parseInt(e.target.value)||0)} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-4 text-xs">
+                      <label className="inline-flex items-center gap-1"><input type="checkbox" checked={caseSensitive} onChange={e=>setCaseSensitive(e.target.checked)} /> Case sensitive</label>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
   {/* Scroll to top now integrated with footer area */}
 
-      <footer className="fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/85 dark:bg-slate-900/85 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/60">
+  <footer className="hidden sm:block fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/85 dark:bg-slate-900/85 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/60">
         <div className="relative max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between text-sm">
           <div className="space-y-1">
             <p className="font-medium text-slate-700 dark:text-slate-300">Bible Reader · Smart Search</p>
