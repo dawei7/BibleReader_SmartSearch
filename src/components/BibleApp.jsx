@@ -17,16 +17,29 @@ const SAMPLE_BIBLE = [
 function escapeRegExp(str){ return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 function classNames(...xs){ return xs.filter(Boolean).join(' '); }
+// Exact abbreviations mapping requested (English canonical names)
+const BOOK_ABBREV_MAP = {
+  'Genesis':'Gen','Exodus':'Exo','Leviticus':'Lev','Numbers':'Num','Deuteronomy':'Deu','Joshua':'Josh','Judges':'Judg','Ruth':'Ruth',
+  '1 Samuel':'1Sam','2 Samuel':'2Sam','1 Kings':'1Kin','2 Kings':'2Kin','1 Chronicles':'1Chr','2 Chronicles':'2Chr',
+  'Ezra':'Ezr','Nehemiah':'Neh','Esther':'Esth','Job':'Job','Psalms':'Ps','Proverbs':'Prov','Ecclesiastes':'Eccl','Song of Solomon':'Song',
+  'Isaiah':'Isa','Jeremiah':'Jer','Lamentations':'Lam','Ezekiel':'Ezek','Daniel':'Dan','Hosea':'Hos','Joel':'Joel','Amos':'Am','Obadiah':'Oba','Jonah':'Jona','Micah':'Mic','Nahum':'Nah','Habakkuk':'Hab','Zephaniah':'Zeph','Haggai':'Hag','Zechariah':'Zech','Malachi':'Mal',
+  'Matthew':'Mat','Mark':'Mar','Luke':'Luk','John':'John','Acts':'Acts','Romans':'Rom','1 Corinthians':'1Cor','2 Corinthians':'2Cor','Galatians':'Gal','Ephesians':'Eph','Philippians':'Phil','Colossians':'Col','1 Thessalonians':'1Ths','2 Thessalonians':'2Ths','1 Timothy':'1Tim','2 Timothy':'2Tim','Titus':'Tit','Philemon':'Phlm','Hebrews':'Heb','James':'Jam','1 Peter':'1Pet','2 Peter':'2Pet','1 John':'1Jn','2 John':'2Jn','3 John':'3Jn','Jude':'Judg','Revelation':'Rev'
+};
+function deriveAbbrev(name){ if(!name) return ''; const parts=name.split(/\s+/); if(/^\d/.test(parts[0])&&parts[1]){ return (parts[0].replace(/[^\d]/g,'')+parts[1].slice(0,3)); } return parts[0].slice(0,3); }
+function normalizeNameForMap(n){ if(!n) return ''; let s=String(n).trim(); // unify common variants
+  s=s.replace(/^Song of Songs$/i,'Song of Solomon');
+  s=s.replace(/^Song of Solomon$/i,'Song of Solomon');
+  s=s.replace(/^Psalm(s)?$/i,'Psalms');
+  s=s.replace(/^Canticles$/i,'Song of Solomon');
+  s=s.replace(/^The Revelation( of John)?$/i,'Revelation');
+  s=s.replace(/^1st /,'1 ').replace(/^2nd /,'2 ').replace(/^3rd /,'3 ');
+  // Capitalize numeric book patterns
+  return s.replace(/\b(\w)/g, (m)=> m.toUpperCase());
+}
 function bookAbbrev(name, fallback){
-  if(fallback && typeof fallback==='string') return fallback.slice(0,4);
-  if(!name) return '';
-  const parts = name.split(/\s+/);
-  // Handle leading numeric books like "1 Samuel", "2 Corinthians"
-  if(/^\d/.test(parts[0]) && parts[1]){
-    return (parts[0].replace(/[^\d]/g,'') + (parts[1].slice(0,2))).trim();
-  }
-  // Default: first 3 letters capitalized
-  return parts[0].slice(0,3);
+  if(fallback && typeof fallback==='string') return fallback; // prefer provided abbrev
+  const key=normalizeNameForMap(name);
+  return BOOK_ABBREV_MAP[key] || deriveAbbrev(name);
 }
 
 function buildSearchRegex(query, mode, { caseSensitive }) {
@@ -614,7 +627,6 @@ export default function BibleApp(){
             <div className="rounded-t-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="text-sm font-semibold">{mode==='read'? 'Reading Controls':'Search Controls'}</div>
-                <button className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600" onClick={()=> setShowControls(false)}>Close</button>
               </div>
               <div ref={panelRef} className="max-h-[70vh] overflow-y-auto px-4 py-3">
                 {mode==='read' ? (
@@ -652,21 +664,14 @@ export default function BibleApp(){
                         })}
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter</label>
-                        <div className="max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl p-2 bg-slate-50/40 dark:bg-slate-800/40">
-                          <div className="grid grid-cols-8 gap-1.5">
-                            {Array.from({length: chapterCount||0}, (_,n)=> n+1).map(n=> (
-                              <button key={n} onClick={()=> setChapterIdx(n-1)} className={classNames('h-8 rounded-md text-[11px] font-medium border', n===chapterIdx+1? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{n}</button>
-                            ))}
-                          </div>
-                        </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Chapter</label>
+                      <div className="grid grid-cols-6 gap-1.5">
+                        {Array.from({length: chapterCount||0}, (_,n)=> n+1).map(n=> (
+                          <button key={n} onClick={()=> setChapterIdx(n-1)} className={classNames('h-9 rounded-md text-[11px] font-semibold border', n===chapterIdx+1? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{n}</button>
+                        ))}
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verses</label>
-                        <div className="text-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">{verseCount||0}</div>
-                      </div>
+                      <div className="mt-2 text-[11px] text-slate-600 dark:text-slate-400">Verses in chapter: {verseCount||0}</div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -678,10 +683,7 @@ export default function BibleApp(){
                         <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={verseCount||1} value={vEnd} onChange={e=> setVEnd(parseInt(e.target.value)||0)} />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 pt-1">
-                      <button className="rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5" onClick={()=> setMode('search')}>Search</button>
-                      <button className="rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-sm font-medium px-4 py-2.5" onClick={()=> { const el=document.getElementById('statistics-panel'); if(el){ const y=el.getBoundingClientRect().top + window.scrollY - 80; window.scrollTo({top:y,behavior:'smooth'}); } }}>To Statistics</button>
-                    </div>
+                    {/* No Search/Statistics buttons here; kept in top bar */}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -749,12 +751,12 @@ export default function BibleApp(){
                         <button className="text-blue-600 dark:text-blue-400 underline decoration-dotted underline-offset-2" onClick={resetSelections}>Clear selection</button>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-3 pt-1">
-                      <button className="rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5" onClick={()=> setMode('read')}>To Reading</button>
-                      <button className="rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-sm font-medium px-4 py-2.5" onClick={()=> { const el=document.getElementById('statistics-panel'); if(el){ const y=el.getBoundingClientRect().top + window.scrollY - 80; window.scrollTo({top:y,behavior:'smooth'}); } }}>To Statistics</button>
-                    </div>
+                    {/* No To Reading/To Statistics here; kept in top bar */}
                   </div>
                 )}
+              </div>
+              <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800">
+                <button className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5" onClick={()=> setShowControls(false)}>Apply</button>
               </div>
             </div>
           </div>
