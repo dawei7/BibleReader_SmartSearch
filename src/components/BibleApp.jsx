@@ -17,6 +17,17 @@ const SAMPLE_BIBLE = [
 function escapeRegExp(str){ return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 function classNames(...xs){ return xs.filter(Boolean).join(' '); }
+function bookAbbrev(name, fallback){
+  if(fallback && typeof fallback==='string') return fallback.slice(0,4);
+  if(!name) return '';
+  const parts = name.split(/\s+/);
+  // Handle leading numeric books like "1 Samuel", "2 Corinthians"
+  if(/^\d/.test(parts[0]) && parts[1]){
+    return (parts[0].replace(/[^\d]/g,'') + (parts[1].slice(0,2))).trim();
+  }
+  // Default: first 3 letters capitalized
+  return parts[0].slice(0,3);
+}
 
 function buildSearchRegex(query, mode, { caseSensitive }) {
   if (!query.trim()) return null;
@@ -610,23 +621,47 @@ export default function BibleApp(){
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible</label>
-                      <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={version} onChange={e=>loadBibleVersion(e.target.value)} disabled={loadingVersion}>
-                        {versions.map(v=> <option key={v.abbreviation} value={v.abbreviation}>{v.name} ({v.language})</option>)}
-                        {version==='sample' && <option value="sample">Sample</option>}
-                      </select>
+                      <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                        {versions.map(v=> (
+                          <button
+                            key={v.abbreviation}
+                            disabled={loadingVersion}
+                            onClick={()=> loadBibleVersion(v.abbreviation)}
+                            className={classNames(
+                              'whitespace-nowrap px-3 py-1.5 rounded-lg border text-xs',
+                              version===v.abbreviation ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                            )}
+                          >{v.name}</button>
+                        ))}
+                        {version==='sample' && (
+                          <button className={classNames('whitespace-nowrap px-3 py-1.5 rounded-lg border text-xs', 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600')}>Sample</button>
+                        )}
+                      </div>
                       {loadingVersion && <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Loading…</div>}
                       {versionError && <div className="mt-1 text-[11px] text-red-600">{versionError}</div>}
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
-                      <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={bookIdx} onChange={e=>onSelectBook(parseInt(e.target.value))}>
-                        {(bible ?? []).map((b,i)=><option key={b.name+i} value={i}>{b.name}</option>)}
-                      </select>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Book</label>
+                      <div className="grid grid-cols-6 gap-1.5">
+                        {(bible ?? []).map((b,i)=>{
+                          const ab = (b.abbrev && String(b.abbrev)) || bookAbbrev(b.name, b.abbrev);
+                          const active = i===bookIdx;
+                          return (
+                            <button key={b.name+i} onClick={()=> onSelectBook(i)} className={classNames('h-9 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter</label>
-                        <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={chapterCount||1} value={chapterIdx+1} onChange={e=> setChapterIdx(clamp((parseInt(e.target.value)||1)-1,0,(chapterCount||1)-1))} />
+                        <div className="max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl p-2 bg-slate-50/40 dark:bg-slate-800/40">
+                          <div className="grid grid-cols-8 gap-1.5">
+                            {Array.from({length: chapterCount||0}, (_,n)=> n+1).map(n=> (
+                              <button key={n} onClick={()=> setChapterIdx(n-1)} className={classNames('h-8 rounded-md text-[11px] font-medium border', n===chapterIdx+1? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{n}</button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verses</label>
@@ -652,10 +687,22 @@ export default function BibleApp(){
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible / Version</label>
-                      <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={version} onChange={e=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} loadBibleVersion(e.target.value); }} disabled={loadingVersion}>
-                        {versions.map(v=> <option key={v.abbreviation} value={v.abbreviation}>{v.name} ({v.language})</option>)}
-                        {version==='sample' && <option value="sample">Sample</option>}
-                      </select>
+                      <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                        {versions.map(v=> (
+                          <button
+                            key={v.abbreviation}
+                            disabled={loadingVersion}
+                            onClick={()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} loadBibleVersion(v.abbreviation); }}
+                            className={classNames(
+                              'whitespace-nowrap px-3 py-1.5 rounded-lg border text-xs',
+                              version===v.abbreviation ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                            )}
+                          >{v.name}</button>
+                        ))}
+                        {version==='sample' && (
+                          <button className={classNames('whitespace-nowrap px-3 py-1.5 rounded-lg border text-xs', 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600')}>Sample</button>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Search term(s)</label>
@@ -673,10 +720,16 @@ export default function BibleApp(){
                     {searchScope==='book' && (
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
-                          <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={bookIdx} onChange={e=>onSelectBook(parseInt(e.target.value))}>
-                            {(bible ?? []).map((b,i)=><option key={b.name+i} value={i}>{b.name}</option>)}
-                          </select>
+                          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Book</label>
+                          <div className="grid grid-cols-6 gap-1.5">
+                            {(bible ?? []).map((b,i)=>{
+                              const ab = (b.abbrev && String(b.abbrev)) || bookAbbrev(b.name, b.abbrev);
+                              const active = i===bookIdx;
+                              return (
+                                <button key={b.name+i} onClick={()=> onSelectBook(i)} className={classNames('h-9 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
+                              );
+                            })}
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
