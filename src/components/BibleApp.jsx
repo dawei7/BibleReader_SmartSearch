@@ -611,12 +611,12 @@ export default function BibleApp(){
         </section>
       </main>
 
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom bar: only Controls */}
       <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-3 py-2 grid grid-cols-3 gap-2">
-          <button onClick={()=>setMode('read')} className={classNames('rounded-lg px-3 py-2 border text-sm', mode==='read'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Read</button>
-          <button onClick={()=>setMode('search')} className={classNames('rounded-lg px-3 py-2 border text-sm', mode==='search'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Search</button>
-          <button onClick={()=> setShowControls(v=>!v)} className="rounded-lg px-3 py-2 border text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600">Controls</button>
+        <div className="mx-auto max-w-7xl px-3 py-2 grid grid-cols-1">
+          <div className="flex justify-center">
+            <button onClick={()=> setShowControls(v=>!v)} className="rounded-lg px-4 py-2 border text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600">Controls</button>
+          </div>
         </div>
       </div>
 
@@ -627,6 +627,7 @@ export default function BibleApp(){
             <div className="rounded-t-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="text-sm font-semibold">{mode==='read'? 'Reading Controls':'Search Controls'}</div>
+                <button className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600" onClick={()=> setShowControls(false)}>Close</button>
               </div>
               <div ref={panelRef} className="max-h-[70vh] overflow-y-auto px-4 py-3">
                 {mode==='read' ? (
