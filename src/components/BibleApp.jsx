@@ -643,6 +643,10 @@ export default function BibleApp(){
                         <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={verseCount||1} value={vEnd} onChange={e=> setVEnd(parseInt(e.target.value)||0)} />
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <button className="rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5" onClick={()=> setMode('search')}>Search</button>
+                      <button className="rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-sm font-medium px-4 py-2.5" onClick={()=> { const el=document.getElementById('statistics-panel'); if(el){ const y=el.getBoundingClientRect().top + window.scrollY - 80; window.scrollTo({top:y,behavior:'smooth'}); } }}>To Statistics</button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -658,7 +662,7 @@ export default function BibleApp(){
                       <input value={queryInput} onChange={e=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} setQueryInput(e.target.value); }} className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" placeholder="e.g. light" />
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs font-medium">
-                      {[{key:'all',label:'All'},{key:'any',label:'Any'},{key:'phrase',label:'Phrase'}].map(o=> (
+                      {[{key:'all',label:'All words'},{key:'any',label:'Any'},{key:'phrase',label:'Phrase'}].map(o=> (
                         <button key={o.key} onClick={()=>setSearchMode(o.key)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchMode===o.key? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
                       ))}
                     </div>
@@ -686,8 +690,15 @@ export default function BibleApp(){
                         </div>
                       </div>
                     )}
-                    <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center justify-between gap-4 text-xs">
                       <label className="inline-flex items-center gap-1"><input type="checkbox" checked={caseSensitive} onChange={e=>setCaseSensitive(e.target.checked)} /> Case sensitive</label>
+                      {(selectedBooks.length||selectedChapters.length) && (
+                        <button className="text-blue-600 dark:text-blue-400 underline decoration-dotted underline-offset-2" onClick={resetSelections}>Clear selection</button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <button className="rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5" onClick={()=> setMode('read')}>To Reading</button>
+                      <button className="rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-sm font-medium px-4 py-2.5" onClick={()=> { const el=document.getElementById('statistics-panel'); if(el){ const y=el.getBoundingClientRect().top + window.scrollY - 80; window.scrollTo({top:y,behavior:'smooth'}); } }}>To Statistics</button>
                     </div>
                   </div>
                 )}
