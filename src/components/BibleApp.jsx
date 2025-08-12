@@ -443,7 +443,7 @@ export default function BibleApp(){
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-slate-50 to-zinc-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors">
   <header ref={headerRef} className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 text-white grid place-content-center font-black tracking-tight text-lg select-none" aria-label="Alpha Omega">ΑΩ</div>
             <div>
@@ -482,7 +482,7 @@ export default function BibleApp(){
       >
   {/* (Desktop sidebar code removed) */}
 
-        <section className="lg:col-span-8 xl:col-span-9 space-y-6 mt-0 lg:mt-0 pt-[0px]">
+  <section className="space-y-6 mt-0 pt-[0px]">
           {mode==='read' ? (
             <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -824,32 +824,7 @@ export default function BibleApp(){
 
   {/* Scroll to top now integrated with footer area */}
 
-  <footer className="hidden sm:block fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/85 dark:bg-slate-900/85 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/60">
-        <div className="relative max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between text-sm">
-          <div className="space-y-1">
-            <p className="font-medium text-slate-700 dark:text-slate-300">Bible Reader · Smart Search</p>
-            <p className="text-slate-500 dark:text-slate-400">© {currentYear} David Schmid. All rights reserved.</p>
-          </div>
-          <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
-            <a href="#top" className="hover:text-slate-900 dark:hover:text-slate-200">Back to top</a>
-            <span className="select-none opacity-40">|</span>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 dark:hover:text-slate-200">GitHub</a>
-            <span className="select-none opacity-40">|</span>
-            <button onClick={()=> setTheme(t=> t==='dark'?'light':'dark')} className="underline decoration-dotted underline-offset-2 hover:text-slate-900 dark:hover:text-slate-200">{theme==='dark'? 'Light theme':'Dark theme'}</button>
-          </div>
-          {showScrollTop && (
-            <button
-              onClick={()=> window.scrollTo({top:0,behavior:'smooth'})}
-              aria-label="Scroll to top"
-              className="absolute right-2 sm:right-4 -top-6 sm:-top-8 w-11 h-11 rounded-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:active:bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-900/30 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-700 transition-colors"
-            >
-              <svg viewBox="0 0 24 24" className="w-6 h-6" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 15l6-6 6 6" />
-              </svg>
-            </button>
-          )}
-        </div>
-      </footer>
+  {/* Footer removed for unified mobile-style layout across all screen sizes */}
     </div>
   );
 }
