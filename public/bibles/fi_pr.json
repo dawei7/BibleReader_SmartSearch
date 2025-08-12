@@ -1,7 +1,7 @@
 [
   {
     "name": "Genesis",
-    "abbrev": "gn",
+    "abbrev": "Gen",
     "chapters": [
       [
         "Alussa Jumala loi taivaan ja maan.",
@@ -1090,7 +1090,7 @@
   },
   {
     "name": "Exodus",
-    "abbrev": "ex",
+    "abbrev": "Exo",
     "chapters": [
       [
         "Nämä ovat Jaakobin pojat, jotka tulivat perheineen Egyptiin isänsä mukana.",
@@ -2023,7 +2023,7 @@
   },
   {
     "name": "Leviticus",
-    "abbrev": "lv",
+    "abbrev": "Lev",
     "chapters": [
       [
         "Herra kutsui Mooseksen pyhäkköteltan luo ja puhui hänelle teltan sisältä näin:",
@@ -2730,7 +2730,7 @@
   },
   {
     "name": "Numbers",
-    "abbrev": "nm",
+    "abbrev": "Num",
     "chapters": [
       [
         "Vuoden ja kuukauden kuluttua siitä kun israelilaiset olivat lähteneet Egyptistä, toisen vuoden toisen kuun ensimmäisenä päivänä, Herra sanoi Siinain autiomaassa pyhäkköteltassa Moosekselle:",
@@ -3785,7 +3785,7 @@
   },
   {
     "name": "Deuteronomy",
-    "abbrev": "dt",
+    "abbrev": "Deu",
     "chapters": [
       [
         "Nämä ovat ne sanat, jotka Mooses puhui Israelin kansalle Jordanin itäpuolella autiomaassa Sufin tienoilla, Paranin, Tofelin, Labanin, Haserotin ja Di-Sahabin seuduilla lähellä Kuolleenmeren laaksoa.",
@@ -4543,7 +4543,7 @@
   },
   {
     "name": "Joshua",
-    "abbrev": "js",
+    "abbrev": "Josh",
     "chapters": [
       [
         "Palvelijansa Mooseksen kuoltua Herra sanoi Joosualle, Nunin pojalle, Mooseksen apulaiselle:",
@@ -5125,7 +5125,7 @@
   },
   {
     "name": "Judges",
-    "abbrev": "jud",
+    "abbrev": "Judg",
     "chapters": [
       [
         "(H1:4-5)Juudan joukot lähtivät sotaan. Besekissä ne kohtasivat Adoni-Besekin ja kävivät taisteluun häntä vastaan.",
@@ -5557,7 +5557,7 @@
   },
   {
     "name": "Ruth",
-    "abbrev": "rt",
+    "abbrev": "Ruth",
     "chapters": [
       [
         "Siihen aikaan, kun tuomarit hallitsivat Israelia, tuli kerran nälänhätä maahan. Muuan mies Juudan Betlehemistä muutti silloin vaimonsa ja kahden poikansa kanssa siirtolaiseksi Moabin maahan.",
@@ -5604,7 +5604,7 @@
   },
   {
     "name": "1 Samuel",
-    "abbrev": "1sm",
+    "abbrev": "1Sam",
     "chapters": [
       [
         "Sufin maan Ramataimissa, Efraimin vuoristossa, asui mies, jonka nimi oli Elkana. Hän kuului Efraimin heimoon, ja hänen isänsä oli Jeroham, Elihun poika. Elihun isä oli Tohu ja tämän isä Sufi.",
@@ -6106,7 +6106,7 @@
   },
   {
     "name": "2 Samuel",
-    "abbrev": "2sm",
+    "abbrev": "2Sam",
     "chapters": [
       [
         "Saul oli kuollut. Daavid oli palannut sotaretkeltään voitettuaan amalekilaiset ja oli majaillut kaksi päivää Siklagissa.",
@@ -6579,7 +6579,7 @@
   },
   {
     "name": "1 Kings",
-    "abbrev": "1kgs",
+    "abbrev": "1Kin",
     "chapters": [
       [
         "Kuningas Daavid oli käynyt vanhaksi, ja vaikka häntä kuinka peiteltiin, hänen ei ollut lämmin.",
@@ -7176,7 +7176,7 @@
   },
   {
     "name": "2 Kings",
-    "abbrev": "2kgs",
+    "abbrev": "2Kin",
     "chapters": [
       [
         "Ahabin kuoleman jälkeen Moab nousi kapinaan ja irrottautui Israelista.",
@@ -7694,7 +7694,7 @@
   },
   {
     "name": "1 Chronicles",
-    "abbrev": "1ch",
+    "abbrev": "1Chr",
     "chapters": [
       [
         "Aadam, Set, Enos,",
@@ -8628,7 +8628,7 @@
   },
   {
     "name": "2 Chronicles",
-    "abbrev": "2ch",
+    "abbrev": "2Chr",
     "chapters": [
       [
         "Salomosta, Daavidin pojasta, tuli mahtava hallitsija, sillä Herra, hänen Jumalansa, oli hänen kanssaan ja lujitti hänen valtansa.",
@@ -9374,7 +9374,7 @@
   },
   {
     "name": "Ezra",
-    "abbrev": "ezr",
+    "abbrev": "Ezr",
     "chapters": [
       [
         "Persian kuninkaan Kyyroksen ensimmäisenä hallitusvuotena Herra toteutti sanansa, jonka profeetta Jeremia oli julistanut. Hän johdatti Kyyroksen kuuluttamaan kaikkialla valtakunnassaan sekä suullisesti että kirjallisesti:",
@@ -9639,7 +9639,7 @@
   },
   {
     "name": "Nehemiah",
-    "abbrev": "ne",
+    "abbrev": "Neh",
     "chapters": [
       [
         "Nehemian, Hakaljan pojan, kertomus. Kun kahdentenakymmenentenä vuotena kislev-kuussa olin Susan linnassa,",
@@ -10023,7 +10023,7 @@
   },
   {
     "name": "Esther",
-    "abbrev": "et",
+    "abbrev": "Esth",
     "chapters": [
       [
         "Tämä tapahtui kuningas Kserkseen aikana, sen Kserkseen, joka hallitsi sataakahtakymmentäseitsemää maakuntaa Intiasta Nubiaan saakka.",
@@ -10174,7 +10174,7 @@
   },
   {
     "name": "Job",
-    "abbrev": "job",
+    "abbrev": "Job",
     "chapters": [
       [
         "Usin maassa eli mies, jonka nimi oli Job. Hän oli kunnon mies, rehellinen ja jumalaapelkäävä, ja hän karttoi kaikkea pahaa.",
@@ -11261,7 +11261,7 @@
   },
   {
     "name": "Psalms",
-    "abbrev": "ps",
+    "abbrev": "Ps",
     "chapters": [
       [
         "Hyvä on sen osa, joka ei vaella jumalattomien tavoin, ei astu syntisten teille, ei istu pilkkaajien parissa",
@@ -13912,7 +13912,7 @@
   },
   {
     "name": "Proverbs",
-    "abbrev": "prv",
+    "abbrev": "Prov",
     "chapters": [
       [
         "Salomon, Daavidin pojan, Israelin kuninkaan, sananlaskut.",
@@ -14856,7 +14856,7 @@
   },
   {
     "name": "Ecclesiastes",
-    "abbrev": "ec",
+    "abbrev": "Eccl",
     "chapters": [
       [
         "Saarnaajan, Daavidin pojan, Jerusalemin kuninkaan, sanoja.",
@@ -15103,7 +15103,7 @@
   },
   {
     "name": "Song of Solomon",
-    "abbrev": "so",
+    "abbrev": "Song",
     "chapters": [
       [
         "Lauluista kaunein, Salomon laulu.",
@@ -15241,7 +15241,7 @@
   },
   {
     "name": "Isaiah",
-    "abbrev": "is",
+    "abbrev": "Isa",
     "chapters": [
       [
         "Jesajan, Amosin pojan, näyt Juudasta ja Jerusalemista. Nämä hän näki Juudan kuninkaiden Ussian, Jotamin, Ahasin sekä Hiskian aikana.",
@@ -16530,7 +16530,7 @@
   },
   {
     "name": "Jeremiah",
-    "abbrev": "jr",
+    "abbrev": "Jer",
     "chapters": [
       [
         "Jeremian, Hilkian pojan, sanat. Jeremia oli pappissukua, kotoisin Anatotista, Benjaminin heimon alueelta.",
@@ -17579,7 +17579,7 @@
   },
   {
     "name": "Lamentations",
-    "abbrev": "lm",
+    "abbrev": "Lam",
     "chapters": [
       [
         "Voi! Miten yksin onkaan nyt kaupunki, ennen niin täynnä väkeä! Kansojen valtiatar on kuin leski. Maitten ruhtinatar tekee orjan työtä.",
@@ -17730,7 +17730,7 @@
   },
   {
     "name": "Ezekiel",
-    "abbrev": "ez",
+    "abbrev": "Ezek",
     "chapters": [
       [
         "Oli kolmaskymmenes vuosi, neljännen kuun viides päivä, ja minä olin pakkosiirtolaisten keskuudessa Kebarjoen varrella. Silloin taivaat aukenivat, ja minä näin näkyjä, jotka Jumala oli lähettänyt.",
@@ -18738,7 +18738,7 @@
   },
   {
     "name": "Daniel",
-    "abbrev": "dn",
+    "abbrev": "Dan",
     "chapters": [
       [
         "Juudan kuninkaan Jojakimin kolmantena hallitusvuotena hyökkäsi Babylonian kuningas Nebukadnessar Jerusalemia vastaan ja saartoi sen.",
@@ -19013,7 +19013,7 @@
   },
   {
     "name": "Hosea",
-    "abbrev": "ho",
+    "abbrev": "Hos",
     "chapters": [
       [
         "Herran sana, joka tuli Hoosealle, Beerin pojalle. Hänen aikanaan olivat Juudan kuninkaina Ussia, Jotam, Ahas ja Hiskia, ja Israelin kuninkaana oli Jerobeam, Joasin poika.",
@@ -19215,7 +19215,7 @@
   },
   {
     "name": "Joel",
-    "abbrev": "jl",
+    "abbrev": "Joel",
     "chapters": [
       [
         "Herran sana, joka tuli Joelille, Petuelin pojalle.",
@@ -19298,7 +19298,7 @@
   },
   {
     "name": "Amos",
-    "abbrev": "am",
+    "abbrev": "Am",
     "chapters": [
       [
         "Aamoksen sanat. Aamos oli Tekoan seudun karjankasvattajia. Tämän sanoman Israelista hän sai kaksi vuotta ennen maanjäristystä. Silloin oli Juudan kuninkaana Ussia ja Israelin kuninkaana Jerobeam, Joasin poika.",
@@ -19444,7 +19444,7 @@
   },
   {
     "name": "Obadiah",
-    "abbrev": "ob",
+    "abbrev": "Oba",
     "chapters": [
       [
         "Obadjan näky. Herra Jumala on sanonut sanansa Edomista, me olemme kuulleet, mitä hän on puhunut. Hänen sanansaattajansa on lähetetty kansojen keskuuteen julistamaan:  -- Nouskaa, lähtekää liikkeelle sotaan Edomia vastaan!",
@@ -19472,7 +19472,7 @@
   },
   {
     "name": "Jonah",
-    "abbrev": "jn",
+    "abbrev": "Jon",
     "chapters": [
       [
         "Joonalle, Amittain pojalle, tuli tämä Herran sana:",
@@ -19515,7 +19515,7 @@
   },
   {
     "name": "Micah",
-    "abbrev": "mi",
+    "abbrev": "Mic",
     "chapters": [
       [
         "Herran sana, joka tuli moresetilaiselle Miikalle Juudan kuninkaiden Jotamin, Ahasin ja Hiskian aikana, näky Samariasta ja Jerusalemista.",
@@ -19634,7 +19634,7 @@
   },
   {
     "name": "Nahum",
-    "abbrev": "na",
+    "abbrev": "Nah",
     "chapters": [
       [
         "Ennussana Ninivestä. Elkosilaisen Nahumin näyn kirja.",
@@ -19692,7 +19692,7 @@
   },
   {
     "name": "Habakkuk",
-    "abbrev": "hk",
+    "abbrev": "Hab",
     "chapters": [
       [
         "Ennussana, jonka profeetta Habakuk sai näyssä.",
@@ -19759,7 +19759,7 @@
   },
   {
     "name": "Zephaniah",
-    "abbrev": "zp",
+    "abbrev": "Zeph",
     "chapters": [
       [
         "Herran sana, joka tuli Sefanjalle Juudan kuninkaan Josian, Amonin pojan, päivinä. Sefanja oli Kusin poika; hänen isoisänsä oli Gedalja, tämän isä oli Amarja ja tämän Hiskia.",
@@ -19822,7 +19822,7 @@
   },
   {
     "name": "Haggai",
-    "abbrev": "hg",
+    "abbrev": "Hag",
     "chapters": [
       [
         "Kuningas Dareioksen toisena hallitusvuotena, kuudennen kuukauden ensimmäisenä päivänä, sai profeetta Haggai tehtäväkseen ilmoittaa Herran sanan Juudan käskynhaltijalle Serubbabelille, Sealtielin pojalle, ja ylipappi Joosualle, Josadakin pojalle. Herran sana kuului:",
@@ -19860,7 +19860,7 @@
   },
   {
     "name": "Zechariah",
-    "abbrev": "zc",
+    "abbrev": "Zech",
     "chapters": [
       [
         "Dareioksen toisena hallitusvuotena, sen kahdeksantena kuukautena, tuli profeetta Sakarjalle, Berekjan pojalle, Iddon pojanpojalle, tämä Herran sana:",
@@ -20032,7 +20032,7 @@
   },
   {
     "name": "Malachi",
-    "abbrev": "ml",
+    "abbrev": "Mal",
     "chapters": [
       [
         "Ennussana. Herran sana, jonka Malakia puhui Israelille.",
@@ -20083,7 +20083,7 @@
   },
   {
     "name": "Matthew",
-    "abbrev": "mt",
+    "abbrev": "Mat",
     "chapters": [
       [
         "Jeesuksen Kristuksen, Daavidin pojan ja Abrahamin pojan, sukuluettelo:",
@@ -20763,7 +20763,7 @@
   },
   {
     "name": "Mark",
-    "abbrev": "mk",
+    "abbrev": "Mar",
     "chapters": [
       [
         "Ilosanoma Jeesuksesta Kristuksesta, Jumalan Pojasta, lähti liikkeelle näin.",
@@ -21180,7 +21180,7 @@
   },
   {
     "name": "Luke",
-    "abbrev": "lk",
+    "abbrev": "Luk",
     "chapters": [
       [
         "Jo monet ovat ryhtyneet työhön ja laatineet kertomuksia niistä asioista, jotka meidän keskuudessamme ovat toteutuneet,",
@@ -21904,7 +21904,7 @@
   },
   {
     "name": "John",
-    "abbrev": "jo",
+    "abbrev": "John",
     "chapters": [
       [
         "Alussa oli Sana. Sana oli Jumalan luona, ja Sana oli Jumala.",
@@ -22398,7 +22398,7 @@
   },
   {
     "name": "Acts",
-    "abbrev": "act",
+    "abbrev": "Acts",
     "chapters": [
       [
         "Edellisessä kirjassani, hyvä Teofilos, kerroin kaikesta siitä, mitä Jeesus teki ja mitä hän opetti, alusta alkaen",
@@ -23183,7 +23183,7 @@
   },
   {
     "name": "Romans",
-    "abbrev": "rm",
+    "abbrev": "Rom",
     "chapters": [
       [
         "Paavali, Kristuksen Jeesuksen palvelija, kutsuttu apostoliksi ja valittu julistamaan Jumalan evankeliumia, tervehtii kaikkia Roomassa olevia Jumalalle rakkaita ja hänen kutsumiaan pyhiä.",
@@ -23621,7 +23621,7 @@
   },
   {
     "name": "1 Corinthians",
-    "abbrev": "1co",
+    "abbrev": "1Cor",
     "chapters": [
       [
         "Paavali, Jumalan tahdosta Kristuksen Jeesuksen apostoliksi kutsuttu, ja veli Sostenes",
@@ -24072,7 +24072,7 @@
   },
   {
     "name": "2 Corinthians",
-    "abbrev": "2co",
+    "abbrev": "2Cor",
     "chapters": [
       [
         "Paavali, Jumalan tahdosta Kristuksen Jeesuksen apostoli, ja veli Timoteus tervehtivät Korintissa olevaa Jumalan seurakuntaa ja kaikkia pyhiä koko Akhaiassa.",
@@ -24351,7 +24351,7 @@
   },
   {
     "name": "Galatians",
-    "abbrev": "gl",
+    "abbrev": "Gal",
     "chapters": [
       [
         "Minä Paavali, apostoli, joka en ole saanut virkaani ihmisiltä enkä kenenkään ihmisen välityksellä vaan jonka ovat apostoliksi asettaneet Jeesus Kristus ja Isä Jumala, joka herätti hänet kuolleista,",
@@ -24507,7 +24507,7 @@
   },
   {
     "name": "Ephesians",
-    "abbrev": "eph",
+    "abbrev": "Eph",
     "chapters": [
       [
         "Paavali, Jumalan tahdosta Kristuksen Jeesuksen apostoli, tervehtii Efesoksessa asuvia, Kristukseen Jeesukseen uskovia pyhiä.",
@@ -24678,7 +24678,7 @@
   },
   {
     "name": "Philippians",
-    "abbrev": "ph",
+    "abbrev": "Phil",
     "chapters": [
       [
         "Paavali ja Timoteus, Kristuksen Jeesuksen palvelijat, tervehtivät kaikkia Filippissä olevia Kristuksen Jeesuksen pyhiä sekä seurakunnan kaitsijoita ja palvelijoita.",
@@ -24795,7 +24795,7 @@
   },
   {
     "name": "Colossians",
-    "abbrev": "cl",
+    "abbrev": "Col",
     "chapters": [
       [
         "Paavali, Jumalan tahdosta Kristuksen Jeesuksen apostoli, ja veli Timoteus",
@@ -24902,7 +24902,7 @@
   },
   {
     "name": "1 Thessalonians",
-    "abbrev": "1ts",
+    "abbrev": "1Ths",
     "chapters": [
       [
         "Paavali, Silvanus ja Timoteus tervehtivät Tessalonikan seurakuntaa, joka elää Isän Jumalan ja Herran Jeesuksen Kristuksen yhteydessä. Armo ja rauha teille.",
@@ -25006,7 +25006,7 @@
   },
   {
     "name": "2 Thessalonians",
-    "abbrev": "2ts",
+    "abbrev": "2Ths",
     "chapters": [
       [
         "Paavali, Silvanus ja Timoteus tervehtivät Tessalonikan seurakuntaa, joka elää Jumalan, meidän Isämme, ja Herran Jeesuksen Kristuksen yhteydessä.",
@@ -25065,7 +25065,7 @@
   },
   {
     "name": "1 Timothy",
-    "abbrev": "1tm",
+    "abbrev": "1Tim",
     "chapters": [
       [
         "Paavali, Kristuksen Jeesuksen apostoli, jonka Jumala, meidän pelastajamme, ja Kristus Jeesus, meidän toivomme, ovat määränneet tähän virkaan,",
@@ -25195,7 +25195,7 @@
   },
   {
     "name": "2 Timothy",
-    "abbrev": "2tm",
+    "abbrev": "2Tim",
     "chapters": [
       [
         "Paavali, Kristuksen Jeesuksen apostoli Jumalan tahdosta, sen lupauksen mukaisesti, jonka olemme saaneet elämästä Kristuksen Jeesuksen yhteydessä,",
@@ -25291,7 +25291,7 @@
   },
   {
     "name": "Titus",
-    "abbrev": "tt",
+    "abbrev": "Tit",
     "chapters": [
       [
         "(H1:1a)Paavali, Jumalan palvelija ja Jeesuksen Kristuksen apostoli,",
@@ -25349,7 +25349,7 @@
   },
   {
     "name": "Philemon",
-    "abbrev": "phm",
+    "abbrev": "Phlm",
     "chapters": [
       [
         "Minä Paavali, joka olen Kristuksen Jeesuksen tähden vankina, ja veli Timoteus tervehdimme rakasta ystäväämme ja työtoveriamme Filemonia",
@@ -25382,7 +25382,7 @@
   },
   {
     "name": "Hebrews",
-    "abbrev": "hb",
+    "abbrev": "Heb",
     "chapters": [
       [
         "Monet kerrat ja monin tavoin Jumala muinoin puhui isillemme profeettojen suulla,",
@@ -25692,7 +25692,7 @@
   },
   {
     "name": "James",
-    "abbrev": "jm",
+    "abbrev": "Jam",
     "chapters": [
       [
         "Jaakob, Jumalan ja Herran Jeesuksen Kristuksen palvelija, tervehtii kahtatoista hajaannuksessa elävää heimokuntaa.",
@@ -25806,7 +25806,7 @@
   },
   {
     "name": "1 Peter",
-    "abbrev": "1pe",
+    "abbrev": "1Pet",
     "chapters": [
       [
         "Pietari, Jeesuksen Kristuksen apostoli, tervehtii valittuja, jotka asuvat hajallaan, muukalaisina Pontoksessa, Galatiassa, Kappadokiassa, Bityniassa ja Aasian maakunnassa",
@@ -25918,7 +25918,7 @@
   },
   {
     "name": "2 Peter",
-    "abbrev": "2pe",
+    "abbrev": "2Pet",
     "chapters": [
       [
         "Simon Pietari, Jeesuksen Kristuksen palvelija ja apostoli, tervehtii teitä, joille Jumalamme ja Vapahtajamme Jeesus Kristus vanhurskaudessaan on suonut saman kalliin uskon kuin meille.",
@@ -25988,7 +25988,7 @@
   },
   {
     "name": "1 John",
-    "abbrev": "1jo",
+    "abbrev": "1Jn",
     "chapters": [
       [
         "Mikä on alusta alkaen ollut, minkä olemme kuulleet, minkä omin silmin nähneet, mitä katselleet ja käsin koskettaneet, siitä me puhumme: elämän Sanasta.",
@@ -26109,7 +26109,7 @@
   },
   {
     "name": "2 John",
-    "abbrev": "2jo",
+    "abbrev": "2Jn",
     "chapters": [
       [
         "Vanhin tervehtii valittua äitiä ja hänen lapsiaan. Minä rakastan teitä totuudessa, enkä yksin minä, vaan kaikki, jotka ovat tulleet tuntemaan totuuden.",
@@ -26130,7 +26130,7 @@
   },
   {
     "name": "3 John",
-    "abbrev": "3jo",
+    "abbrev": "3Jn",
     "chapters": [
       [
         "Vanhin tervehtii rakasta Gaiusta. Minä rakastan sinua vilpittömästi.",
@@ -26152,7 +26152,7 @@
   },
   {
     "name": "Jude",
-    "abbrev": "jd",
+    "abbrev": "Jude",
     "chapters": [
       [
         "Juudas, Jeesuksen Kristuksen palvelija, Jaakobin veli, tervehtii kutsuttuja, joita Isä Jumala rakastaa ja varjelee Jeesusta Kristusta varten.",
@@ -26182,7 +26182,7 @@
   },
   {
     "name": "Revelation",
-    "abbrev": "re",
+    "abbrev": "Rev",
     "chapters": [
       [
         "Jeesuksen Kristuksen ilmestys, jonka Jumala antoi hänelle näyttääkseen palvelijoilleen, mitä pian on tapahtuva. Jumala lähetti enkelinsä ja ilmoitti kaiken tämän palvelijalleen Johannekselle,",

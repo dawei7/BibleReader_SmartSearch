@@ -22,8 +22,8 @@ const BOOK_ABBREV_MAP = {
   'Genesis':'Gen','Exodus':'Exo','Leviticus':'Lev','Numbers':'Num','Deuteronomy':'Deu','Joshua':'Josh','Judges':'Judg','Ruth':'Ruth',
   '1 Samuel':'1Sam','2 Samuel':'2Sam','1 Kings':'1Kin','2 Kings':'2Kin','1 Chronicles':'1Chr','2 Chronicles':'2Chr',
   'Ezra':'Ezr','Nehemiah':'Neh','Esther':'Esth','Job':'Job','Psalms':'Ps','Proverbs':'Prov','Ecclesiastes':'Eccl','Song of Solomon':'Song',
-  'Isaiah':'Isa','Jeremiah':'Jer','Lamentations':'Lam','Ezekiel':'Ezek','Daniel':'Dan','Hosea':'Hos','Joel':'Joel','Amos':'Am','Obadiah':'Oba','Jonah':'Jona','Micah':'Mic','Nahum':'Nah','Habakkuk':'Hab','Zephaniah':'Zeph','Haggai':'Hag','Zechariah':'Zech','Malachi':'Mal',
-  'Matthew':'Mat','Mark':'Mar','Luke':'Luk','John':'John','Acts':'Acts','Romans':'Rom','1 Corinthians':'1Cor','2 Corinthians':'2Cor','Galatians':'Gal','Ephesians':'Eph','Philippians':'Phil','Colossians':'Col','1 Thessalonians':'1Ths','2 Thessalonians':'2Ths','1 Timothy':'1Tim','2 Timothy':'2Tim','Titus':'Tit','Philemon':'Phlm','Hebrews':'Heb','James':'Jam','1 Peter':'1Pet','2 Peter':'2Pet','1 John':'1Jn','2 John':'2Jn','3 John':'3Jn','Jude':'Judg','Revelation':'Rev'
+  'Isaiah':'Isa','Jeremiah':'Jer','Lamentations':'Lam','Ezekiel':'Ezek','Daniel':'Dan','Hosea':'Hos','Joel':'Joel','Amos':'Am','Obadiah':'Oba','Jonah':'Jon','Micah':'Mic','Nahum':'Nah','Habakkuk':'Hab','Zephaniah':'Zeph','Haggai':'Hag','Zechariah':'Zech','Malachi':'Mal',
+  'Matthew':'Mat','Mark':'Mar','Luke':'Luk','John':'John','Acts':'Acts','Romans':'Rom','1 Corinthians':'1Cor','2 Corinthians':'2Cor','Galatians':'Gal','Ephesians':'Eph','Philippians':'Phil','Colossians':'Col','1 Thessalonians':'1Ths','2 Thessalonians':'2Ths','1 Timothy':'1Tim','2 Timothy':'2Tim','Titus':'Tit','Philemon':'Phlm','Hebrews':'Heb','James':'Jam','1 Peter':'1Pet','2 Peter':'2Pet','1 John':'1Jn','2 John':'2Jn','3 John':'3Jn','Jude':'Jude','Revelation':'Rev'
 };
 function deriveAbbrev(name){ if(!name) return ''; const parts=name.split(/\s+/); if(/^\d/.test(parts[0])&&parts[1]){ return (parts[0].replace(/[^\d]/g,'')+parts[1].slice(0,3)); } return parts[0].slice(0,3); }
 function normalizeNameForMap(n){ if(!n) return ''; let s=String(n).trim(); // unify common variants
@@ -94,6 +94,50 @@ function highlightText(text, regexOrObj){
   }
   if(lastIndex<text.length) parts.push(text.slice(lastIndex));
   return parts.length? parts : text;
+}
+
+// Simple dual-handle slider (horizontal) for verse range selection
+function DualRange({ min=1, max=1, start, end, onChange }){
+  const trackRef = useRef(null);
+  const s = Math.min(Math.max(start,min), max);
+  const e = Math.min(Math.max(end,min), max);
+  const leftPct = ((s-min)/(max-min))*100;
+  const rightPct = ((e-min)/(max-min))*100;
+  function clampVal(v){ return Math.min(Math.max(v,min),max); }
+  function posToVal(clientX){
+    const rect = trackRef.current.getBoundingClientRect();
+    const ratio = (clientX - rect.left) / rect.width;
+    return clampVal(Math.round(min + ratio*(max-min))||min);
+  }
+  function startDrag(which, evt){
+    evt.preventDefault();
+    const move = (e)=>{
+      const val = posToVal(e.clientX || (e.touches && e.touches[0]?.clientX));
+      if(which==='start'){
+        const newStart = Math.min(val, eValRef.current-1>=min? eValRef.current-1: eValRef.current);
+        onChange({ start:newStart, end:eValRef.current });
+      } else {
+        const newEnd = Math.max(val, sValRef.current+1<=max? sValRef.current+1: sValRef.current);
+        onChange({ start:sValRef.current, end:newEnd });
+      }
+    };
+    const up = ()=>{ window.removeEventListener('mousemove',move); window.removeEventListener('touchmove',move); window.removeEventListener('mouseup',up); window.removeEventListener('touchend',up); };
+    window.addEventListener('mousemove',move);
+    window.addEventListener('touchmove',move,{passive:false});
+    window.addEventListener('mouseup',up); window.addEventListener('touchend',up);
+  }
+  const sValRef = useRef(s); sValRef.current=s;
+  const eValRef = useRef(e); eValRef.current=e;
+  return (
+    <div className="w-full select-none py-1">
+      <div ref={trackRef} className="relative h-2 rounded-full bg-slate-200 dark:bg-slate-700">
+        <div className="absolute h-2 rounded-full bg-indigo-500 dark:bg-indigo-400" style={{left:`${leftPct}%`, width:`${rightPct-leftPct}%`}} />
+        <button type="button" aria-label="Start" onMouseDown={e=>startDrag('start',e)} onTouchStart={e=>startDrag('start',e)} className="absolute -top-1 w-4 h-4 rounded-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-500 shadow" style={{left:`calc(${leftPct}% - 8px)`}} />
+        <button type="button" aria-label="End" onMouseDown={e=>startDrag('end',e)} onTouchStart={e=>startDrag('end',e)} className="absolute -top-1 w-4 h-4 rounded-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-500 shadow" style={{left:`calc(${rightPct}% - 8px)`}} />
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-slate-500 dark:text-slate-400"><span>{s}</span><span>{e===max? `${e} (end)`: e}</span></div>
+    </div>
+  );
 }
 
 // Main component
@@ -396,11 +440,24 @@ export default function BibleApp(){
     setShowBookPicker(true);
   }
   function openChapterPicker(){
-    setTempChapterIdx(mChapterIdx);
+    if(mode==='read'){
+      setTempChapterIdx(mChapterIdx);
+    } else {
+      // derive from current search chapter range (use from as representative)
+      setTempChapterIdx((mChapFrom||1)-1);
+    }
     setShowChapterPicker(true);
   }
   function applyBookPicker(){ setMBookIdx(tempBookIdx); setMChapterIdx(0); setMVStart(1); setMVEnd(0); setShowBookPicker(false); }
-  function applyChapterPicker(){ setMChapterIdx(tempChapterIdx); setMVStart(1); setMVEnd(0); setShowChapterPicker(false); }
+  function applyChapterPicker(){
+    if(mode==='read'){
+      setMChapterIdx(tempChapterIdx); setMVStart(1); setMVEnd(0);
+    } else {
+      // In search mode treat chapter picker as selecting a single chapter range
+      const chap=tempChapterIdx+1; setMChapFrom(chap); setMChapTo(chap);
+    }
+    setShowChapterPicker(false);
+  }
   // Apply handlers for mobile
   function applyRead(){
     const commit = ()=>{
@@ -633,7 +690,12 @@ export default function BibleApp(){
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
-                      <button onClick={openBookPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between"><span className="font-medium text-slate-700 dark:text-slate-200 truncate">{(bible?.[mBookIdx]?.name)||'—'}</span><span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span></button>
+                      <button onClick={openBookPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
+                        <span className="font-medium text-slate-700 dark:text-slate-200 truncate">
+                          {(()=>{ const b=bible?.[mBookIdx]; if(!b) return '—'; const ab=bookAbbrev(b.name,b.abbrev); return ab? `${ab} · ${b.name}`: b.name; })()}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
+                      </button>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter</label>
@@ -652,16 +714,16 @@ export default function BibleApp(){
                           <span>Range: <span className="font-medium text-slate-700 dark:text-slate-200">{mVStart}</span></span>
                           <span>to <span className="font-medium text-slate-700 dark:text-slate-200">{mVEnd===0? mVerseCount || 1 : mVEnd}</span>{mVEnd===0 && ' (end)'} </span>
                         </div>
-                        <div className="relative h-10 flex items-center">
-                          {/* Dual range slider */}
-                          {(()=>{ const endVal = mVEnd===0? mVerseCount || 1 : mVEnd; return (
-                            <>
-                              <input type="range" min={1} max={mVerseCount||1} value={mVStart} onChange={e=>{ const v=parseInt(e.target.value)||1; const end=endVal; if(v>=end){ if(end< (mVerseCount||1)) { setMVStart(v); setMVEnd(end); } else { setMVStart(end-1>0? end-1:1); } } else setMVStart(v); }} className="absolute inset-0 w-full opacity-70 cursor-pointer" />
-                              <input type="range" min={1} max={mVerseCount||1} value={endVal} onChange={e=>{ let v=parseInt(e.target.value)||1; if(v<=mVStart){ v=mVStart+1; } if(v> (mVerseCount||1)) v=(mVerseCount||1); setMVEnd(v=== (mVerseCount||1)? 0 : v); }} className="absolute inset-0 w-full opacity-70 cursor-pointer pointer-events-auto" />
-                            </>
-                          ); })()}
-                          <div className="absolute left-0 right-0 h-1 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                        </div>
+                        <DualRange
+                          min={1}
+                          max={mVerseCount||1}
+                          start={mVStart}
+                          end={mVEnd===0? (mVerseCount||1): mVEnd}
+                          onChange={({start,end})=>{
+                            setMVStart(start);
+                            if(end === (mVerseCount||1)) setMVEnd(0); else setMVEnd(end);
+                          }}
+                        />
                       </div>
                     )}
                     {/* No Search/Statistics buttons here; kept in top bar */}
@@ -669,23 +731,12 @@ export default function BibleApp(){
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible / Version</label>
-                      <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                        {versions.map(v=> (
-                          <button
-                            key={v.abbreviation}
-                            disabled={loadingVersion}
-                            onClick={()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} setMVersion(v.abbreviation); }}
-                            className={classNames(
-                              'whitespace-nowrap px-3 py-1.5 rounded-lg border text-xs',
-                              (mVersion||version)===v.abbreviation ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
-                            )}
-                          >{v.name}</button>
-                        ))}
-                        {version==='sample' && (
-                          <button className={classNames('whitespace-nowrap px-3 py-1.5 rounded-lg border text-xs', 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600')}>Sample</button>
-                        )}
-                      </div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible Version</label>
+                      <button onClick={openVersionPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
+                        <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{currentVersionObj? currentVersionObj.name : (mVersion||version)}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
+                      </button>
+                      {versionError && <div className="mt-1 text-[11px] text-red-600">{versionError}</div>}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Search term(s)</label>
@@ -704,28 +755,24 @@ export default function BibleApp(){
                       <button onClick={()=>setMSearchScope('book')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', mSearchScope==='book'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>This Book</button>
                     </div>
                     {mSearchScope==='book' && (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Book</label>
-                          <div className="grid grid-cols-6 gap-1.5">
-                            {(bible ?? []).map((b,i)=>{
-                              const ab = (b.abbrev && String(b.abbrev)) || bookAbbrev(b.name, b.abbrev);
-                              const active = i===mBookIdx;
-                              return (
-                                <button key={b.name+i} onClick={()=> { setMBookIdx(i); }} className={classNames('h-9 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
-                              );
-                            })}
-                          </div>
+                          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
+                          <button onClick={openBookPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
+                            <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{(()=>{ const b=bible?.[mBookIdx]; if(!b) return '—'; const ab=bookAbbrev(b.name,b.abbrev); return ab? `${ab} · ${b.name}`: b.name; })()}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
+                          </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter from</label>
-                            <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={(bible?.[mBookIdx]?.chapters.length)||1} value={mChapFrom} onChange={e=> setMChapFrom(parseInt(e.target.value)||1)} />
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter Range</label>
+                          <div className="flex items-center gap-2">
+                            <button onClick={openChapterPicker} className="flex-1 text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
+                              <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{(mChapFrom===1 && (mChapTo===0 || mChapTo=== (bible?.[mBookIdx]?.chapters.length||1)))? 'All Chapters' : (mChapFrom===mChapTo || mChapTo===0 ? `Chapter ${mChapFrom}` : `Ch ${mChapFrom}–${mChapTo===0?'end':mChapTo}`)}</span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
+                            </button>
+                            <button type="button" onClick={()=>{ setMChapFrom(1); setMChapTo(0); }} className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-medium">All</button>
                           </div>
-                          <div>
-                            <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter to (0=end)</label>
-                            <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={(bible?.[mBookIdx]?.chapters.length)||1} value={mChapTo} onChange={e=> setMChapTo(parseInt(e.target.value)||0)} />
-                          </div>
+                          <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Pick a chapter to limit results or choose All for whole book.</div>
                         </div>
                       </div>
                     )}
@@ -788,8 +835,8 @@ export default function BibleApp(){
                   </div>
                   <div className="flex-1 overflow-y-auto px-4 py-4">
                     <div className="grid grid-cols-6 gap-2">
-                      {(bible ?? []).map((b,i)=>{ const ab=(b.abbrev && String(b.abbrev)) || bookAbbrev(b.name,b.abbrev); const active=i===tempBookIdx; return (
-                        <button key={b.name+i} onClick={()=>{ setTempBookIdx(i); setTempChapterIdx(0); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
+                      {(bible ?? []).map((b,i)=>{ const ab=bookAbbrev(b.name,b.abbrev); const active=i===tempBookIdx; return (
+                        <button key={b.name+i} onClick={()=>{ setTempBookIdx(i); setTempChapterIdx(0); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border tracking-wide', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
                       ); })}
                     </div>
                   </div>
