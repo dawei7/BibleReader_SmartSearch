@@ -121,6 +121,17 @@ export default function BibleApp(){
   const [lazyMode,setLazyMode]=useState(false);
   const [theme,setTheme]=useState('light');
   const [metaMap,setMetaMap]=useState({});
+  // Persistence refs
+  const storedVersionRef = useRef(null);
+  // Initialize persisted theme & version preference
+  useEffect(()=>{
+    try {
+      const t = localStorage.getItem('br_theme');
+      if(t==='dark' || t==='light') setTheme(t);
+      const v = localStorage.getItem('br_version');
+      if(v) storedVersionRef.current = v;
+    } catch { /* ignore */ }
+  },[]);
   const loadTokenRef=useRef(0); const bibleCacheRef=useRef({}); const bookCache=useRef({});
   const BASE=import.meta?.env?.BASE_URL || '/';
   const FETCH_TIMEOUT_MS=8000;
@@ -135,6 +146,7 @@ export default function BibleApp(){
     if(bibleCacheRef.current[abbr]){
       setBible(bibleCacheRef.current[abbr]);
       setVersion(abbr);
+  try { localStorage.setItem('br_version', abbr); } catch {}
       setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0);
       setAttemptLog(l=>[...l,`cacheHit:${abbr}`].slice(-60));
       return true;
@@ -203,6 +215,7 @@ export default function BibleApp(){
       }
       setBible(data);
       setVersion(abbr);
+  try { localStorage.setItem('br_version', abbr); } catch {}
       if(data.length>=3) bibleCacheRef.current[abbr]=data;
       setAttemptLog(l=>[...l,`success:${abbr}`].slice(-60));
       setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0);
@@ -231,8 +244,18 @@ export default function BibleApp(){
       const ordered=[...picked,...rest];
       setVersions(ordered);
       if(ordered.length){
-        const preferred=ordered[0];
-        if(preferred){ await loadBibleVersion(preferred.abbreviation); }
+        const stored = storedVersionRef.current && ordered.find(v=> v.abbreviation===storedVersionRef.current);
+        if(stored){
+          const ok = await loadBibleVersion(stored.abbreviation);
+          if(!ok){
+            // fall back to first priority
+            const preferred=ordered[0];
+            if(preferred) await loadBibleVersion(preferred.abbreviation);
+          }
+        } else {
+          const preferred=ordered[0];
+          if(preferred) await loadBibleVersion(preferred.abbreviation);
+        }
         if(!bible){ const others=ordered.slice(1); if(others.length) attemptLoadAny(others); }
       }
     } catch {
@@ -241,7 +264,7 @@ export default function BibleApp(){
   })(); return ()=>{ cancelled=true; }; },[]);
 
   // Apply theme to root
-  useEffect(()=>{ const root=document.documentElement; if(theme==='dark') root.classList.add('dark'); else root.classList.remove('dark'); },[theme]);
+  useEffect(()=>{ const root=document.documentElement; if(theme==='dark') root.classList.add('dark'); else root.classList.remove('dark'); try { localStorage.setItem('br_theme', theme); } catch {} },[theme]);
   const currentBook = bible?.[bookIdx]; const chapterCount=currentBook?.chapters.length || 0; const verseCount=currentBook?.chapters[chapterIdx]?.length || 0; const vEndEffective = vEnd===0? verseCount : clamp(vEnd,1,verseCount); const vStartEffective = clamp(vStart,1,vEndEffective); const searchObj = useMemo(()=> buildSearchRegex(query,searchMode,{caseSensitive}),[query,searchMode,caseSensitive]);
   useEffect(()=>{ const t=setTimeout(()=> setQuery(queryInput.trim()),500); return ()=> clearTimeout(t); },[queryInput]);
   const readVerses = useMemo(()=> !currentBook? []: (currentBook.chapters[chapterIdx]||[]).slice(vStartEffective-1,vEndEffective).map((t,i)=>({n:i+vStartEffective,text:t})),[currentBook,chapterIdx,vStartEffective,vEndEffective]);
