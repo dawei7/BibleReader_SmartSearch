@@ -735,8 +735,8 @@ export default function BibleApp(){
         </section>
       </main>
 
-      {/* Mobile bottom bar: only Controls */}
-  <div ref={bottomBarRef} className={classNames('md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur pb-[env(safe-area-inset-bottom)] transition-opacity duration-150', showControls && 'opacity-0 pointer-events-none')}>
+    {/* Unified bottom bar (was mobile only) */}
+  <div ref={bottomBarRef} className={classNames('fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur pb-[env(safe-area-inset-bottom)] transition-opacity duration-150', showControls && 'opacity-0 pointer-events-none')}>
         <div className="mx-auto max-w-7xl px-3 py-2 grid grid-cols-1">
           <div className="flex justify-center">
             <button aria-expanded={showControls} onClick={()=> setShowControls(v=>!v)} className={classNames('rounded-lg px-4 py-2 border text-sm', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600', showControls && 'ring-1 ring-slate-400/50 dark:ring-slate-500/50')}>Controls</button>
@@ -744,11 +744,11 @@ export default function BibleApp(){
         </div>
       </div>
 
-      {/* Mobile bottom-sheet controls */}
-      {isMobile && (
+  {/* Unified full-screen controls overlay */}
+  {(true) && (
   <div
     className={classNames(
-      'md:hidden fixed inset-0 z-50 transition-transform duration-200 transform',
+  'fixed inset-0 z-50 transition-transform duration-200 transform',
       showControls ? 'translate-y-0 pointer-events-auto' : 'translate-y-full pointer-events-none'
     )}
     aria-hidden={!showControls}
