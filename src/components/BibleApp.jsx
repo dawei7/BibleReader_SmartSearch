@@ -443,7 +443,7 @@ export default function BibleApp(){
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-slate-50 to-zinc-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors">
   <header ref={headerRef} className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm">
-        <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
+  <div className="w-full px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 text-white grid place-content-center font-black tracking-tight text-lg select-none" aria-label="Alpha Omega">ΑΩ</div>
             <div>
@@ -477,7 +477,7 @@ export default function BibleApp(){
       </header>
 
   <main
-        className="flex-1 mx-auto max-w-4xl px-4 pb-40 transition-[padding]"
+  className="flex-1 w-full px-4 pb-40 transition-[padding]"
   style={{ paddingTop: 0 }}
       >
   {/* (Desktop sidebar code removed) */}
@@ -596,7 +596,7 @@ export default function BibleApp(){
 
     {/* Unified bottom bar (was mobile only) */}
   <div ref={bottomBarRef} className={classNames('fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur pb-[env(safe-area-inset-bottom)] transition-opacity duration-150', showControls && 'opacity-0 pointer-events-none')}>
-        <div className="mx-auto max-w-7xl px-3 py-2 grid grid-cols-1">
+  <div className="w-full px-3 py-2 grid grid-cols-1">
           <div className="flex justify-center">
             <button aria-expanded={showControls} onClick={()=> setShowControls(v=>!v)} className={classNames('rounded-lg px-4 py-2 border text-sm', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600', showControls && 'ring-1 ring-slate-400/50 dark:ring-slate-500/50')}>Controls</button>
           </div>
