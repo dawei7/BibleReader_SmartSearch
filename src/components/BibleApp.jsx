@@ -35,7 +35,7 @@ function normalizeNameForMap(n){ if(!n) return ''; let s=String(n).trim(); // un
   s=s.replace(/^1st /,'1 ').replace(/^2nd /,'2 ').replace(/^3rd /,'3 ');
   // Capitalize numeric book patterns
   return s.replace(/\b(\w)/g, (m)=> m.toUpperCase());
-}
+} 
 function bookAbbrev(name, fallback){
   if(fallback && typeof fallback==='string') return fallback; // prefer provided abbrev
   const key=normalizeNameForMap(name);
@@ -80,87 +80,52 @@ function countMatches(text, search){
 }
 
 function highlightText(text, regexOrObj){
-  if (!regexOrObj) return text;
-  let highlight;
-  if (regexOrObj instanceof RegExp) { let flags = regexOrObj.flags.includes('g')? regexOrObj.flags: regexOrObj.flags+'g'; if(!flags.includes('u')) flags+='u'; highlight = new RegExp(regexOrObj.source, flags); }
-  else { const r=regexOrObj.highlight; let flags = r.flags.includes('g')? r.flags: r.flags+'g'; if(!flags.includes('u')) flags+='u'; highlight=new RegExp(r.source, flags); }
-  const parts=[]; let last=0; let m; while((m=highlight.exec(text))!==null){ const start=m.index; const end=start+m[0].length; if(start>last) parts.push(text.slice(last,start)); parts.push(<mark key={start} className="rounded px-0.5 bg-transparent text-red-600 font-semibold">{text.slice(start,end)}</mark>); last=end; if(m.index===highlight.lastIndex) highlight.lastIndex++; } if(last<text.length) parts.push(text.slice(last)); return parts;
+  if(!regexOrObj) return text;
+  let highlightRegex=null;
+  if(regexOrObj instanceof RegExp){ highlightRegex=regexOrObj; }
+  else if(regexOrObj.highlight){ highlightRegex=regexOrObj.highlight; }
+  if(!highlightRegex) return text;
+  const parts=[]; let lastIndex=0; const r=new RegExp(highlightRegex.source, highlightRegex.flags.includes('g')? highlightRegex.flags: highlightRegex.flags+'g');
+  for(let m; (m=r.exec(text));){
+    const i=m.index; if(i>lastIndex) parts.push(text.slice(lastIndex,i));
+    parts.push(<mark key={i+text} className="bg-yellow-200 dark:bg-yellow-600/50 rounded px-0.5">{m[0]}</mark>);
+    lastIndex=i+m[0].length;
+    if(r.lastIndex===i) r.lastIndex++; // avoid zero-length loops
+  }
+  if(lastIndex<text.length) parts.push(text.slice(lastIndex));
+  return parts.length? parts : text;
 }
 
+// Main component
 export default function BibleApp(){
-  // Base path (GitHub Pages subpath safe). Vite injects import.meta.env.BASE_URL
-  // Normalize base (remove trailing slashes). Double escaping fixed.
-  const BASE = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '/');
-  if (typeof window !== 'undefined') {
-    // One-time debug log of base path (remove once verified)
-    // eslint-disable-next-line no-console
-    console.info('[BibleApp] BASE_URL =', BASE, 'import.meta.env.BASE_URL =', import.meta.env.BASE_URL);
-  }
+  // Core state (some variables referenced further below were originally defined earlier in file)
   const [bible,setBible]=useState(null);
+  const [version,setVersion]=useState('en_kjv');
+  const [mode,setMode]=useState('read');
+  const [bookIdx,setBookIdx]=useState(0);
+  const [chapterIdx,setChapterIdx]=useState(0);
+  const [vStart,setVStart]=useState(1);
+  const [vEnd,setVEnd]=useState(0);
+  const [query,setQuery]=useState('');
+  const [queryInput,setQueryInput]=useState('');
+  const [searchMode,setSearchMode]=useState('all');
+  const [searchScope,setSearchScope]=useState('all');
+  const [chapFrom,setChapFrom]=useState(1);
+  const [chapTo,setChapTo]=useState(0);
+  const [caseSensitive,setCaseSensitive]=useState(false);
   const [versions,setVersions]=useState([]);
-  const [version,setVersion]=useState('');
   const [loadingVersion,setLoadingVersion]=useState(false);
   const [versionError,setVersionError]=useState(null);
-  // Theme (light/dark) --------------------------------------------------
-  const [theme,setTheme]=useState(()=>{
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('theme');
-      if (stored === 'light' || stored === 'dark') return stored;
-      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light';
-    }
-    return 'light';
-  });
-  useEffect(()=>{
-    if (typeof document !== 'undefined') {
-      const root = document.documentElement;
-      if (theme === 'dark') root.classList.add('dark'); else root.classList.remove('dark');
-      try { localStorage.setItem('theme', theme); } catch {}
-    }
-  },[theme]);
-  // Optional: react to system theme changes when user hasn't explicitly chosen
-  useEffect(()=>{
-    if (!window.matchMedia) return;
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    const listener = (e)=>{
-      const stored = localStorage.getItem('theme');
-      if (!stored) setTheme(e.matches? 'dark':'light');
-    };
-    mql.addEventListener?.('change', listener);
-    return ()=> mql.removeEventListener?.('change', listener);
-  },[]);
-  const [mode,setMode]=useState('read');
-  const [bookIdx,setBookIdx]=useState(0); const [chapterIdx,setChapterIdx]=useState(0); const [vStart,setVStart]=useState(1); const [vEnd,setVEnd]=useState(0);
-  const [queryInput,setQueryInput]=useState(''); const [query,setQuery]=useState('');
-  const [searchScope,setSearchScope]=useState('all');
-  const [chapFrom,setChapFrom]=useState(1); const [chapTo,setChapTo]=useState(0);
-  const [searchMode,setSearchMode]=useState('all'); const [caseSensitive,setCaseSensitive]=useState(false);
-  const [lazyMode,setLazyMode]=useState(true);
-  const [lastAttempt,setLastAttempt]=useState('');
   const [attemptLog,setAttemptLog]=useState([]);
+  const [lastAttempt,setLastAttempt]=useState(null);
+  const [lazyMode,setLazyMode]=useState(false);
+  const [theme,setTheme]=useState('light');
   const [metaMap,setMetaMap]=useState({});
-  const bookCache=useRef({});
-  const bibleCacheRef=useRef({});
-  const loadTokenRef=useRef(0);
-  const FETCH_TIMEOUT_MS=7000;
-  const MAX_SEARCH_RESULTS = 5000;
-
-  async function attemptLoadAny(list){ for(const v of list){ const ok=await loadBibleVersion(v.abbreviation); if(ok) return true; } if(!bible){ setBible(SAMPLE_BIBLE); setVersion('sample'); } return false; }
-
-  useEffect(()=>{ let cancelled=false; (async()=>{ try { const res=await fetch(`${BASE}bibles/index.json`,{cache:'no-cache'}); if(!res.ok) throw new Error('index fetch'); const idx= await res.json(); if(cancelled) return; const flat = idx.flatMap(g=> g.versions.map(v=>({language:g.language,name:v.name,abbreviation:v.abbreviation}))); 
-        // Custom ordering: 1) Schlachter  2) King James  3) remaining alphabetical by name
-        const priority = ['de_schlachter','en_kjv'];
-        const picked = priority.map(abbr => flat.find(v=> v.abbreviation===abbr)).filter(Boolean);
-        const rest = flat.filter(v=> !priority.includes(v.abbreviation)).sort((a,b)=> a.name.localeCompare(b.name));
-        const ordered = [...picked, ...rest];
-        setVersions(ordered);
-        if(ordered.length){
-          // Prefer first (Schlachter if present, else KJV, else first alphabetical)
-          const preferred = ordered[0];
-          if(preferred){ await loadBibleVersion(preferred.abbreviation); }
-          // Fallback: try others only if preferred failed
-          if(!bible){ const others = ordered.slice(1); if(others.length) attemptLoadAny(others); }
-        }
-      } catch { if(!cancelled){ setBible(SAMPLE_BIBLE); setVersion('sample'); } } })(); return ()=>{cancelled=true}; },[]);
+  const loadTokenRef=useRef(0); const bibleCacheRef=useRef({}); const bookCache=useRef({});
+  const BASE=import.meta?.env?.BASE_URL || '/';
+  const FETCH_TIMEOUT_MS=8000;
+  const MAX_SEARCH_RESULTS=5000;
+  // Derived counts & groupings declared later to avoid duplication after refactor
   function normalizeBible(data){ data.forEach(b=>{ if(!b.name) b.name = b.abbrev? String(b.abbrev).toUpperCase():'Unknown'; }); }
   function validateBibleStructure(raw){ return Array.isArray(raw) && raw.every(b=> b && typeof b==='object' && Array.isArray(b.chapters)); }
   function coerceBible(raw){ if(validateBibleStructure(raw)) return raw; if(raw && typeof raw==='object'){ const cand = raw.books || raw.bible || raw.data; if(validateBibleStructure(cand)) return cand; } throw new Error('Invalid JSON format'); }
@@ -250,6 +215,33 @@ export default function BibleApp(){
       setLoadingVersion(false);
     }
   }
+  async function attemptLoadAny(list){ for(const v of list){ const ok=await loadBibleVersion(v.abbreviation); if(ok) return true; } if(!bible){ setBible(SAMPLE_BIBLE); setVersion('sample'); } return false; }
+
+  // Load versions index on mount
+  useEffect(()=>{ let cancelled=false; (async()=>{
+    try {
+      const res=await fetch(`${BASE}bibles/index.json`,{cache:'no-cache'});
+      if(!res.ok) throw new Error('index fetch');
+      const idx=await res.json(); if(cancelled) return;
+      const flat = idx.flatMap(g=> g.versions.map(v=>({language:g.language,name:v.name,abbreviation:v.abbreviation})));
+      // Priority order: de_schlachter, en_kjv then rest alphabetical
+      const priority=['de_schlachter','en_kjv'];
+      const picked = priority.map(ab=> flat.find(v=> v.abbreviation===ab)).filter(Boolean);
+      const rest = flat.filter(v=> !priority.includes(v.abbreviation)).sort((a,b)=> a.name.localeCompare(b.name));
+      const ordered=[...picked,...rest];
+      setVersions(ordered);
+      if(ordered.length){
+        const preferred=ordered[0];
+        if(preferred){ await loadBibleVersion(preferred.abbreviation); }
+        if(!bible){ const others=ordered.slice(1); if(others.length) attemptLoadAny(others); }
+      }
+    } catch {
+      if(!cancelled){ setBible(SAMPLE_BIBLE); setVersion('sample'); }
+    }
+  })(); return ()=>{ cancelled=true; }; },[]);
+
+  // Apply theme to root
+  useEffect(()=>{ const root=document.documentElement; if(theme==='dark') root.classList.add('dark'); else root.classList.remove('dark'); },[theme]);
   const currentBook = bible?.[bookIdx]; const chapterCount=currentBook?.chapters.length || 0; const verseCount=currentBook?.chapters[chapterIdx]?.length || 0; const vEndEffective = vEnd===0? verseCount : clamp(vEnd,1,verseCount); const vStartEffective = clamp(vStart,1,vEndEffective); const searchObj = useMemo(()=> buildSearchRegex(query,searchMode,{caseSensitive}),[query,searchMode,caseSensitive]);
   useEffect(()=>{ const t=setTimeout(()=> setQuery(queryInput.trim()),500); return ()=> clearTimeout(t); },[queryInput]);
   const readVerses = useMemo(()=> !currentBook? []: (currentBook.chapters[chapterIdx]||[]).slice(vStartEffective-1,vEndEffective).map((t,i)=>({n:i+vStartEffective,text:t})),[currentBook,chapterIdx,vStartEffective,vEndEffective]);
@@ -268,7 +260,7 @@ export default function BibleApp(){
   },[searchResults,bible]);
   const [selectedBooks,setSelectedBooks]=useState([]); const [selectedChapters,setSelectedChapters]=useState([]);
   // Mobile behavior ----------------------------------------------------
-  const [isMobile,setIsMobile]=useState(false);
+  // Removed desktop layout; single mobile-style layout
   const [showControls,setShowControls]=useState(false); // bottom-sheet visibility on mobile
   const [showScrollTop,setShowScrollTop]=useState(false);
   const headerRef = useRef(null);
@@ -302,12 +294,7 @@ export default function BibleApp(){
   useEffect(()=>{
     if(headerRef.current){ setHeaderHeight(headerRef.current.offsetHeight || 72); }
   },[mode]);
-  useEffect(()=>{
-    function handleResize(){ setIsMobile(window.innerWidth < 768); }
-    handleResize();
-    window.addEventListener('resize',handleResize);
-    return ()=> window.removeEventListener('resize',handleResize);
-  },[]);
+  // Removed responsive resize listener (always mobile layout)
   // measure bottom bar height for sheet offset
   useEffect(()=>{
     function measureBar(){ if(bottomBarRef.current){ const h = bottomBarRef.current.offsetHeight || 52; setBottomBarH(h); } }
@@ -343,7 +330,7 @@ export default function BibleApp(){
   },[]);
   // Lock background scroll when full-screen mobile controls open
   useEffect(()=>{
-    if(!isMobile) return; // only mobile overlay needs lock
+    // Always apply scroll lock when controls open
     const body = document.body;
     if(showControls){
       const prev = body.style.overflow;
@@ -353,7 +340,7 @@ export default function BibleApp(){
       body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow;
     }
     return ()=>{ if(body.dataset._prevOverflow!==undefined){ body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow; } };
-  },[showControls,isMobile]);
+  },[showControls]);
   // Selections cleared inline when version or search input changes; also defensively here if query/version changed elsewhere
   useEffect(()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} },[queryInput,version]);
   const chapterBreakdown = useMemo(()=>{ if(searchResults.exceeded) return []; if(selectedBooks.length!==1) return []; const b=selectedBooks[0]; return Object.entries(searchResults.perChap).filter(([k])=> k.startsWith(b+" ")).map(([k,c])=>({ name:k.substring(b.length+1), count:c })).sort((a,b)=> parseInt(a.name)-parseInt(b.name)); },[selectedBooks,searchResults]);
@@ -470,129 +457,7 @@ export default function BibleApp(){
         className="flex-1 mx-auto max-w-4xl px-4 pb-40 transition-[padding]"
   style={{ paddingTop: 0 }}
       >
-        {/* Sidebar visually hidden (kept for now for reference) */}
-        {!isMobile && (
-        <aside className="hidden">
-          <motion.div
-            ref={panelRef}
-            layout
-            className={classNames(
-              'rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/100 dark:bg-slate-900/90 px-4 pt-6 pb-4 shadow-lg backdrop-blur-sm transition-colors',
-              'max-h-[calc(100vh-7rem)] overflow-y-auto'
-            )}
-            initial={{opacity:0,y:10}}
-            animate={{opacity:1,y:0}}
-            transition={{duration:.25}}
-          >
-            {mode==='read' ? (
-              <div className="space-y-4">
-                <h2 className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Reading Mode</h2>
-                {/* Bible selector */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible</label>
-                  <select
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600"
-                    value={version}
-                    onChange={e=>loadBibleVersion(e.target.value)}
-                    disabled={loadingVersion}
-                  >
-                    {versions.map(v=> <option key={v.abbreviation} value={v.abbreviation}>{v.name} ({v.language})</option>)}
-                    {version==='sample' && <option value="sample">Sample</option>}
-                  </select>
-                  {loadingVersion && <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Loading…</div>}
-                  {versionError && <div className="mt-1 text-[11px] text-red-600">{versionError}</div>}
-                </div>
-                {/* Book */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
-                  <select
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-                    value={bookIdx}
-                    onChange={e=>onSelectBook(parseInt(e.target.value))}
-                  >
-                    {(bible ?? []).map((b,i)=><option key={b.name+i} value={i}>{b.name}</option>)}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter</label>
-                    <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={chapterCount||1} value={chapterIdx+1} onChange={e=> setChapterIdx(clamp((parseInt(e.target.value)||1)-1,0,(chapterCount||1)-1))} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verses</label>
-                    <div className="text-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">{verseCount||0}</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verse from</label>
-                    <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={verseCount||1} value={vStart} onChange={e=> setVStart(parseInt(e.target.value)||1)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verse to (0=end)</label>
-                    <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={verseCount||1} value={vEnd} onChange={e=> setVEnd(parseInt(e.target.value)||0)} />
-                  </div>
-                </div>
-                <button className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 transition-colors" onClick={()=> setMode('search')}>Switch to Search</button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <h2 className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Search Mode</h2>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bible / Version</label>
-                  <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={version} onChange={e=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} loadBibleVersion(e.target.value); }} disabled={loadingVersion}>
-                    {versions.map(v=> <option key={v.abbreviation} value={v.abbreviation}>{v.name} ({v.language})</option>)}
-                    {version==='sample' && <option value="sample">Sample</option>}
-                  </select>
-                  {loadingVersion && <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Loading…</div>}
-                  {versionError && <div className="mt-1 text-[11px] text-red-600">{versionError}</div>}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Search term(s)</label>
-                  <input value={queryInput} onChange={e=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} setQueryInput(e.target.value); }} className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" placeholder="e.g. light" />
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs font-medium">
-                  {[{key:'all',label:'All words'},{key:'any',label:'Any'},{key:'phrase',label:'Phrase'}].map(o=> (
-                    <button key={o.key} onClick={()=>setSearchMode(o.key)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchMode===o.key? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
-                  ))}
-                </div>
-                <div className="text-xs font-medium grid grid-cols-2 gap-2">
-                  <button onClick={()=>setSearchScope('all')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchScope==='all'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Whole Bible</button>
-                  <button onClick={()=>setSearchScope('book')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', searchScope==='book'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>This Book</button>
-                </div>
-                {searchScope==='book' && (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
-                      <select className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" value={bookIdx} onChange={e=>onSelectBook(parseInt(e.target.value))}>
-                        {(bible ?? []).map((b,i)=><option key={b.name+i} value={i}>{b.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter from</label>
-                        <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={1} max={(bible?.[bookIdx]?.chapters.length)||1} value={chapFrom} onChange={e=> setChapFrom(parseInt(e.target.value)||1)} />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Chapter to (0=end)</label>
-                        <input type="number" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" min={0} max={(bible?.[bookIdx]?.chapters.length)||1} value={chapTo} onChange={e=> setChapTo(parseInt(e.target.value)||0)} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-4 text-xs">
-                  <label ref={caseSensitiveRef} className="inline-flex items-center gap-1"><input type="checkbox" checked={caseSensitive} onChange={e=>setCaseSensitive(e.target.checked)} /> Case sensitive</label>
-                </div>
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button className="rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 transition-colors" onClick={()=> setMode('read')}>To Reading</button>
-                  <button className="rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-sm font-medium px-4 py-2.5 transition-colors" onClick={()=> { const el=document.getElementById('statistics-panel'); if(el){ const y=el.getBoundingClientRect().top + window.scrollY - 80; window.scrollTo({top:y,behavior:'smooth'}); } }}>To Statistics</button>
-                </div>
-              </div>
-            )}
-      {/* mobile pin/auto-hide removed in favor of header toggle */}
-          </motion.div>
-        </aside>
-    )}
+  {/* (Desktop sidebar code removed) */}
 
         <section className="lg:col-span-8 xl:col-span-9 space-y-6 mt-0 lg:mt-0 pt-[0px]">
           {mode==='read' ? (
