@@ -491,17 +491,12 @@ export default function BibleApp(){
       </header>
 
   <main
-        className="flex-1 mx-auto max-w-7xl px-4 pb-36 grid grid-cols-1 lg:grid-cols-12 gap-6 transition-[padding]"
-        style={isMobile? { paddingTop: dynamicPadTop } : { paddingTop: 12 }}
+        className="flex-1 mx-auto max-w-4xl px-4 pb-40 transition-[padding]"
+        style={{ paddingTop: dynamicPadTop }}
       >
+        {/* Sidebar visually hidden (kept for now for reference) */}
         {!isMobile && (
-        <aside
-          className={classNames(
-            'lg:col-span-4 xl:col-span-3 z-40',
-            'sticky top-[72px] self-start h-fit'
-          )}
-          
-        >
+        <aside className="hidden">
           <motion.div
             ref={panelRef}
             layout
