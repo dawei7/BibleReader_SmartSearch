@@ -272,7 +272,7 @@ export default function BibleApp(){
   const [showControls,setShowControls]=useState(false); // bottom-sheet visibility on mobile
   const [showScrollTop,setShowScrollTop]=useState(false);
   const headerRef = useRef(null);
-  const panelRef = useRef(null);
+  const panelRef = useRef(null); // now only used for overlay scroll area
   // Mobile-only staged controls state
   const [mVersion,setMVersion] = useState('');
   const [mBookIdx,setMBookIdx] = useState(0);
@@ -293,39 +293,15 @@ export default function BibleApp(){
   const [tempBookIdx,setTempBookIdx] = useState(0);
   const [tempChapterIdx,setTempChapterIdx] = useState(0);
   const bottomBarRef = useRef(null);
-  const [headerHeight,setHeaderHeight]=useState(72); // fallback
-  const [panelHeight,setPanelHeight]=useState(0);
+  const [headerHeight,setHeaderHeight]=useState(72); // may be used for future spacing
   const [bottomBarH,setBottomBarH]=useState(52);
   const caseSensitiveRef = useRef(null);
 
   // measure header + panel sizes for dynamic spacing on mobile
+  // Simplified: only track header height (static) for potential future offset
   useEffect(()=>{
-    function measure(){
-      if(headerRef.current){ setHeaderHeight(headerRef.current.offsetHeight || 72); }
-      if(panelRef.current){ setPanelHeight(panelRef.current.offsetHeight || 0); }
-    }
-    measure();
-    window.addEventListener('resize',measure);
-    const ro = typeof ResizeObserver!=='undefined'? new ResizeObserver(measure):null;
-    if(ro && headerRef.current) ro.observe(headerRef.current);
-    if(ro && panelRef.current) ro.observe(panelRef.current);
-    return ()=>{ window.removeEventListener('resize',measure); ro?.disconnect(); };
-  },[mode,isMobile]);
-  // Measure whenever controls become visible (desktop sidebar only)
-  useEffect(()=>{
-    if(isMobile) return;
-    if(showControls && panelRef.current){
-      const h = panelRef.current.offsetHeight || panelRef.current.scrollHeight || 0;
-      if(h>0) setPanelHeight(h);
-      const id = requestAnimationFrame(()=>{
-        if(panelRef.current){
-          const hh = panelRef.current.offsetHeight || panelRef.current.scrollHeight || 0;
-          if(hh>0) setPanelHeight(hh);
-        }
-      });
-      return ()=> cancelAnimationFrame(id);
-    }
-  },[isMobile, showControls, mode]);
+    if(headerRef.current){ setHeaderHeight(headerRef.current.offsetHeight || 72); }
+  },[mode]);
   useEffect(()=>{
     function handleResize(){ setIsMobile(window.innerWidth < 768); }
     handleResize();
@@ -453,7 +429,7 @@ export default function BibleApp(){
   const currentYear = new Date().getFullYear();
   // Dynamic padding top: header + panel (if visible)
   // Mobile: no extra top padding needed; sticky header occupies layout space
-  let dynamicPadTop = isMobile ? 0 : 12;
+  let dynamicPadTop = 0; // unified layout
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-slate-50 to-zinc-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors">
   <header ref={headerRef} className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm">
@@ -492,7 +468,7 @@ export default function BibleApp(){
 
   <main
         className="flex-1 mx-auto max-w-4xl px-4 pb-40 transition-[padding]"
-        style={{ paddingTop: dynamicPadTop }}
+  style={{ paddingTop: 0 }}
       >
         {/* Sidebar visually hidden (kept for now for reference) */}
         {!isMobile && (
