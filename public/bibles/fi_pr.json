@@ -1090,7 +1090,7 @@
   },
   {
     "name": "Exodus",
-    "abbrev": "Exo",
+    "abbrev": "Exod",
     "chapters": [
       [
         "Nämä ovat Jaakobin pojat, jotka tulivat perheineen Egyptiin isänsä mukana.",
@@ -3785,7 +3785,7 @@
   },
   {
     "name": "Deuteronomy",
-    "abbrev": "Deu",
+    "abbrev": "Deut",
     "chapters": [
       [
         "Nämä ovat ne sanat, jotka Mooses puhui Israelin kansalle Jordanin itäpuolella autiomaassa Sufin tienoilla, Paranin, Tofelin, Labanin, Haserotin ja Di-Sahabin seuduilla lähellä Kuolleenmeren laaksoa.",
@@ -6579,7 +6579,7 @@
   },
   {
     "name": "1 Kings",
-    "abbrev": "1Kin",
+    "abbrev": "1Kgs",
     "chapters": [
       [
         "Kuningas Daavid oli käynyt vanhaksi, ja vaikka häntä kuinka peiteltiin, hänen ei ollut lämmin.",
@@ -7176,7 +7176,7 @@
   },
   {
     "name": "2 Kings",
-    "abbrev": "2Kin",
+    "abbrev": "2Kgs",
     "chapters": [
       [
         "Ahabin kuoleman jälkeen Moab nousi kapinaan ja irrottautui Israelista.",
@@ -9374,7 +9374,7 @@
   },
   {
     "name": "Ezra",
-    "abbrev": "Ezr",
+    "abbrev": "Ezra",
     "chapters": [
       [
         "Persian kuninkaan Kyyroksen ensimmäisenä hallitusvuotena Herra toteutti sanansa, jonka profeetta Jeremia oli julistanut. Hän johdatti Kyyroksen kuuluttamaan kaikkialla valtakunnassaan sekä suullisesti että kirjallisesti:",
@@ -19298,7 +19298,7 @@
   },
   {
     "name": "Amos",
-    "abbrev": "Am",
+    "abbrev": "Amos",
     "chapters": [
       [
         "Aamoksen sanat. Aamos oli Tekoan seudun karjankasvattajia. Tämän sanoman Israelista hän sai kaksi vuotta ennen maanjäristystä. Silloin oli Juudan kuninkaana Ussia ja Israelin kuninkaana Jerobeam, Joasin poika.",
@@ -19444,7 +19444,7 @@
   },
   {
     "name": "Obadiah",
-    "abbrev": "Oba",
+    "abbrev": "Obad",
     "chapters": [
       [
         "Obadjan näky. Herra Jumala on sanonut sanansa Edomista, me olemme kuulleet, mitä hän on puhunut. Hänen sanansaattajansa on lähetetty kansojen keskuuteen julistamaan:  -- Nouskaa, lähtekää liikkeelle sotaan Edomia vastaan!",
@@ -19472,7 +19472,7 @@
   },
   {
     "name": "Jonah",
-    "abbrev": "Jon",
+    "abbrev": "Jonah",
     "chapters": [
       [
         "Joonalle, Amittain pojalle, tuli tämä Herran sana:",
@@ -20083,7 +20083,7 @@
   },
   {
     "name": "Matthew",
-    "abbrev": "Mat",
+    "abbrev": "Matt",
     "chapters": [
       [
         "Jeesuksen Kristuksen, Daavidin pojan ja Abrahamin pojan, sukuluettelo:",
@@ -20763,7 +20763,7 @@
   },
   {
     "name": "Mark",
-    "abbrev": "Mar",
+    "abbrev": "Mark",
     "chapters": [
       [
         "Ilosanoma Jeesuksesta Kristuksesta, Jumalan Pojasta, lähti liikkeelle näin.",
@@ -21180,7 +21180,7 @@
   },
   {
     "name": "Luke",
-    "abbrev": "Luk",
+    "abbrev": "Luke",
     "chapters": [
       [
         "Jo monet ovat ryhtyneet työhön ja laatineet kertomuksia niistä asioista, jotka meidän keskuudessamme ovat toteutuneet,",
@@ -24902,7 +24902,7 @@
   },
   {
     "name": "1 Thessalonians",
-    "abbrev": "1Ths",
+    "abbrev": "1Thess",
     "chapters": [
       [
         "Paavali, Silvanus ja Timoteus tervehtivät Tessalonikan seurakuntaa, joka elää Isän Jumalan ja Herran Jeesuksen Kristuksen yhteydessä. Armo ja rauha teille.",
@@ -25006,7 +25006,7 @@
   },
   {
     "name": "2 Thessalonians",
-    "abbrev": "2Ths",
+    "abbrev": "2Thess",
     "chapters": [
       [
         "Paavali, Silvanus ja Timoteus tervehtivät Tessalonikan seurakuntaa, joka elää Jumalan, meidän Isämme, ja Herran Jeesuksen Kristuksen yhteydessä.",
@@ -25291,7 +25291,7 @@
   },
   {
     "name": "Titus",
-    "abbrev": "Tit",
+    "abbrev": "Titus",
     "chapters": [
       [
         "(H1:1a)Paavali, Jumalan palvelija ja Jeesuksen Kristuksen apostoli,",
@@ -25692,7 +25692,7 @@
   },
   {
     "name": "James",
-    "abbrev": "Jam",
+    "abbrev": "Jas",
     "chapters": [
       [
         "Jaakob, Jumalan ja Herran Jeesuksen Kristuksen palvelija, tervehtii kahtatoista hajaannuksessa elävää heimokuntaa.",
@@ -25988,7 +25988,7 @@
   },
   {
     "name": "1 John",
-    "abbrev": "1Jn",
+    "abbrev": "1John",
     "chapters": [
       [
         "Mikä on alusta alkaen ollut, minkä olemme kuulleet, minkä omin silmin nähneet, mitä katselleet ja käsin koskettaneet, siitä me puhumme: elämän Sanasta.",
@@ -26109,7 +26109,7 @@
   },
   {
     "name": "2 John",
-    "abbrev": "2Jn",
+    "abbrev": "2John",
     "chapters": [
       [
         "Vanhin tervehtii valittua äitiä ja hänen lapsiaan. Minä rakastan teitä totuudessa, enkä yksin minä, vaan kaikki, jotka ovat tulleet tuntemaan totuuden.",
@@ -26130,7 +26130,7 @@
   },
   {
     "name": "3 John",
-    "abbrev": "3Jn",
+    "abbrev": "3John",
     "chapters": [
       [
         "Vanhin tervehtii rakasta Gaiusta. Minä rakastan sinua vilpittömästi.",
