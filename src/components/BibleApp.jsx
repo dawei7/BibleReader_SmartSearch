@@ -635,8 +635,8 @@ export default function BibleApp(){
                 <div className="px-5 py-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
                   <div className="text-sm text-slate-600 dark:text-slate-400"><span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook?.name}</span> Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})</div>
                   <div className="flex items-center gap-2 text-xs">
-                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> setChapterIdx(c=> clamp(c-1,0,chapterCount-1))}>◀︎</button>
-                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> setChapterIdx(c=> clamp(c+1,0,chapterCount-1))}>▶︎</button>
+                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> { setChapterIdx(c=> clamp(c-1,0,chapterCount-1)); setTimeout(()=> window.scrollTo({ top: 0, behavior: 'smooth' }), 100); }}>◀︎</button>
+                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> { setChapterIdx(c=> clamp(c+1,0,chapterCount-1)); setTimeout(()=> window.scrollTo({ top: 0, behavior: 'smooth' }), 100); }}>▶︎</button>
                   </div>
                 </div>
               </div>
