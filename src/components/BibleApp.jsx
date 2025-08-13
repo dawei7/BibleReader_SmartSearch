@@ -588,11 +588,13 @@ export default function BibleApp(){
   <section className="space-y-6 mt-0 pt-[0px]">
           {mode==='read' ? (
             <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="text-sm text-slate-600 dark:text-slate-400"><span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook?.name}</span> Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})</div>
-                <div className="flex items-center gap-2 text-xs">
-                  <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> setChapterIdx(c=> clamp(c-1,0,chapterCount-1))}>◀︎</button>
-                  <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> setChapterIdx(c=> clamp(c+1,0,chapterCount-1))}>▶︎</button>
+              <div className="sticky z-10 -mx-5" style={{ top: Math.max(0, headerHeight - 1) }}>
+                <div className="px-5 py-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                  <div className="text-sm text-slate-600 dark:text-slate-400"><span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook?.name}</span> Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})</div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> setChapterIdx(c=> clamp(c-1,0,chapterCount-1))}>◀︎</button>
+                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> setChapterIdx(c=> clamp(c+1,0,chapterCount-1))}>▶︎</button>
+                  </div>
                 </div>
               </div>
               <div className="mt-4 space-y-3 leading-8">
