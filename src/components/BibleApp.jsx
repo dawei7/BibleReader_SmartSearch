@@ -167,6 +167,9 @@ export default function BibleApp(){
   const [theme,setTheme]=useState('light');
   const [metaMap,setMetaMap]=useState({});
   const [showAbout,setShowAbout]=useState(false);
+    const [highlightInRead,setHighlightInRead]=useState(false);
+    const [pendingScrollVerse,setPendingScrollVerse]=useState(null);
+  const [stickyReadHeight,setStickyReadHeight]=useState(0);
   // Persistence refs
   const storedVersionRef = useRef(null);
   // Initialize persisted theme & version preference
@@ -336,6 +339,7 @@ export default function BibleApp(){
   const [showScrollTop,setShowScrollTop]=useState(false);
   const headerRef = useRef(null);
   const panelRef = useRef(null); // now only used for overlay scroll area
+  const readStickyRef = useRef(null);
   // Mobile-only staged controls state
   const [mVersion,setMVersion] = useState('');
   const [mBookIdx,setMBookIdx] = useState(0);
@@ -365,6 +369,13 @@ export default function BibleApp(){
   useEffect(()=>{
     if(headerRef.current){ setHeaderHeight(headerRef.current.offsetHeight || 72); }
   },[mode]);
+  // Measure sticky read header height (title+buttons) for precise scroll alignment
+  useEffect(()=>{
+    const measure = ()=> setStickyReadHeight(readStickyRef.current?.offsetHeight || 0);
+    measure();
+    window.addEventListener('resize', measure);
+    return ()=> window.removeEventListener('resize', measure);
+  },[headerHeight, bookIdx, chapterIdx, mode]);
   // Removed responsive resize listener (always mobile layout)
   // measure bottom bar height for sheet offset
   useEffect(()=>{
@@ -420,7 +431,39 @@ export default function BibleApp(){
   function toggleChapter(chName){ setSelectedChapters(cs=> cs.includes(chName)? cs.filter(c=>c!==chName): [...cs,chName]); }
   function resetSelections(){ setSelectedBooks([]); setSelectedChapters([]); }
   function onSelectBook(i){ setBookIdx(i); setChapterIdx(0); setVStart(1); setVEnd(0); }
-  function jumpTo(book, chapter, verse){ if(!bible) return; const idx=bible.findIndex(b=>b.name===book || b.abbrev===book); if(idx>=0){ setBookIdx(idx); setChapterIdx(chapter-1); setVStart(verse); setVEnd(0); setMode('read'); window.scrollTo({top:0,behavior:'smooth'}); } }
+  function jumpTo(book, chapter, verse){
+    if(!bible) return;
+    const idx = bible.findIndex(b=> b.name===book || b.abbrev===book);
+    if(idx>=0){
+      setBookIdx(idx);
+      setChapterIdx(chapter-1);
+      // Show full chapter immediately
+      setVStart(1);
+      setVEnd(0);
+      // Enable highlighting and schedule scroll to verse
+      setHighlightInRead(true);
+      setPendingScrollVerse(verse||1);
+      setMode('read');
+    }
+  }
+  // After jumping from search, scroll to the target verse in read mode
+  useEffect(()=>{
+    if(pendingScrollVerse==null) return;
+    const v = pendingScrollVerse;
+    
+    // Use a longer delay to ensure the full chapter renders first
+    const timer = setTimeout(()=>{
+      const el = document.querySelector(`[data-verse="${v}"]`);
+      if(el){
+        try { 
+          // Use scrollIntoView which respects the CSS scroll-margin-top
+          el.scrollIntoView({ behavior:'smooth', block:'start' }); 
+        } catch {}
+      }
+      setPendingScrollVerse(null);
+    }, 300);
+    return ()=> clearTimeout(timer);
+  },[bookIdx,chapterIdx,pendingScrollVerse]);
   // Derived counts for mobile staged selection
   const mChapterCount = bible?.[mBookIdx]?.chapters.length || 0;
   const mVerseCount = bible?.[mBookIdx]?.chapters?.[mChapterIdx]?.length || 0;
@@ -588,7 +631,7 @@ export default function BibleApp(){
   <section className="space-y-6 mt-0 pt-[0px]">
           {mode==='read' ? (
             <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
-              <div className="sticky z-10 -mx-5" style={{ top: Math.max(0, headerHeight - 1) }}>
+              <div ref={readStickyRef} className="sticky z-10 -mx-5" style={{ top: Math.max(0, headerHeight - 1) }}>
                 <div className="px-5 py-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
                   <div className="text-sm text-slate-600 dark:text-slate-400"><span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook?.name}</span> Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})</div>
                   <div className="flex items-center gap-2 text-xs">
@@ -599,9 +642,9 @@ export default function BibleApp(){
               </div>
               <div className="mt-4 space-y-3 leading-8">
                 {readVerses.map(v=> (
-                  <div key={v.n} className="rounded-xl px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                  <div key={v.n} data-verse={v.n} className="rounded-xl px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ scrollMarginTop: Math.max(0, headerHeight - 1) + stickyReadHeight }}>
                     <span className="mr-2 select-none text-slate-400">{v.n}</span>
-                    <span>{v.text}</span>
+                    <span>{(highlightInRead && searchObj)? highlightText(v.text, searchObj) : v.text}</span>
                   </div>
                 ))}
               </div>
