@@ -166,6 +166,7 @@ export default function BibleApp(){
   const [lazyMode,setLazyMode]=useState(false);
   const [theme,setTheme]=useState('light');
   const [metaMap,setMetaMap]=useState({});
+  const [showAbout,setShowAbout]=useState(false);
   // Persistence refs
   const storedVersionRef = useRef(null);
   // Initialize persisted theme & version preference
@@ -310,6 +311,8 @@ export default function BibleApp(){
 
   // Apply theme to root
   useEffect(()=>{ const root=document.documentElement; if(theme==='dark') root.classList.add('dark'); else root.classList.remove('dark'); try { localStorage.setItem('br_theme', theme); } catch {} },[theme]);
+  // Close About overlay on Escape
+  useEffect(()=>{ if(!showAbout) return; const onKey=(e)=>{ if(e.key==='Escape') setShowAbout(false); }; window.addEventListener('keydown',onKey); return ()=> window.removeEventListener('keydown',onKey); },[showAbout]);
   const currentBook = bible?.[bookIdx]; const chapterCount=currentBook?.chapters.length || 0; const verseCount=currentBook?.chapters[chapterIdx]?.length || 0; const vEndEffective = vEnd===0? verseCount : clamp(vEnd,1,verseCount); const vStartEffective = clamp(vStart,1,vEndEffective); const searchObj = useMemo(()=> buildSearchRegex(query,searchMode,{caseSensitive}),[query,searchMode,caseSensitive]);
   useEffect(()=>{ const t=setTimeout(()=> setQuery(queryInput.trim()),500); return ()=> clearTimeout(t); },[queryInput]);
   const readVerses = useMemo(()=> !currentBook? []: (currentBook.chapters[chapterIdx]||[]).slice(vStartEffective-1,vEndEffective).map((t,i)=>({n:i+vStartEffective,text:t})),[currentBook,chapterIdx,vStartEffective,vEndEffective]);
@@ -396,11 +399,11 @@ export default function BibleApp(){
     onScroll();
     return ()=> window.removeEventListener('scroll',onScroll);
   },[]);
-  // Lock background scroll when full-screen mobile controls open
+  // Lock background scroll when full-screen overlays open (controls/about)
   useEffect(()=>{
-    // Always apply scroll lock when controls open
     const body = document.body;
-    if(showControls){
+    const needLock = showControls || showAbout;
+    if(needLock){
       const prev = body.style.overflow;
       body.dataset._prevOverflow = prev;
       body.style.overflow='hidden';
@@ -408,7 +411,7 @@ export default function BibleApp(){
       body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow;
     }
     return ()=>{ if(body.dataset._prevOverflow!==undefined){ body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow; } };
-  },[showControls]);
+  },[showControls,showAbout]);
   // Selections cleared inline when version or search input changes; also defensively here if query/version changed elsewhere
   useEffect(()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} },[queryInput,version]);
   const chapterBreakdown = useMemo(()=>{ if(searchResults.exceeded) return []; if(selectedBooks.length!==1) return []; const b=selectedBooks[0]; return Object.entries(searchResults.perChap).filter(([k])=> k.startsWith(b+" ")).map(([k,c])=>({ name:k.substring(b.length+1), count:c })).sort((a,b)=> parseInt(a.name)-parseInt(b.name)); },[selectedBooks,searchResults]);
@@ -503,11 +506,15 @@ export default function BibleApp(){
   <header ref={headerRef} className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm">
   <div className="w-full px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 text-white grid place-content-center font-black tracking-tight text-lg select-none" aria-label="Alpha Omega">ΑΩ</div>
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">Bible Reader · Smart Search</h1>
-              <p className="text-xs font-medium bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Alpha · Omega</p>
-            </div>
+            <button
+              type="button"
+              onClick={()=> setShowAbout(true)}
+              className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 text-white grid place-content-center font-black tracking-tight text-lg select-none focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              aria-label="About this app"
+              title="About this app"
+            >
+              ΑΩ
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <nav className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
@@ -538,6 +545,44 @@ export default function BibleApp(){
   className="flex-1 w-full px-4 pb-40 transition-[padding]"
   style={{ paddingTop: 0 }}
       >
+  {showAbout && (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+      <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 text-white grid place-content-center font-black tracking-tight text-lg select-none" aria-hidden>
+              ΑΩ
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm sm:text-base font-semibold tracking-tight truncate">About this app</div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Bible reading and smart search, thoughtfully crafted.</p>
+            </div>
+          </div>
+          <button onClick={()=> setShowAbout(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Close</button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="space-y-3 text-sm leading-6 text-slate-700 dark:text-slate-300 max-w-2xl">
+          <p>
+            Hi, I’m <span className="font-medium">David Schmid</span> (born 12 December 1986), a data engineer who loves AI and data science. With the help of GPT‑5 Agent Mode, I built this app to make Bible study fast, focused, and enjoyable.
+          </p>
+          <p>
+            As a conservative, Bible‑believing Christian, my aim is to pair deep respect for Scripture with modern technology—so it’s easier to read, search, and explore God’s Word.
+          </p>
+          <div className="pt-1 flex flex-wrap items-center gap-3 text-[13px]">
+            <a href="https://github.com/dawei7" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800">
+              <span className="font-medium">GitHub</span>
+              <span className="text-slate-500">/dawei7</span>
+            </a>
+            <a href="https://www.linkedin.com/in/david-schmid-56194772/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800">
+              <span className="font-medium">LinkedIn</span>
+              <span className="text-slate-500">@david-schmid</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
   {/* (Desktop sidebar code removed) */}
 
   <section className="space-y-6 mt-0 pt-[0px]">
