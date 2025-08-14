@@ -97,49 +97,7 @@ function highlightText(text, regexOrObj){
   return parts.length? parts : text;
 }
 
-// Simple dual-handle slider (horizontal) for verse range selection
-function DualRange({ min=1, max=1, start, end, onChange }){
-  const trackRef = useRef(null);
-  const s = Math.min(Math.max(start,min), max);
-  const e = Math.min(Math.max(end,min), max);
-  const leftPct = ((s-min)/(max-min))*100;
-  const rightPct = ((e-min)/(max-min))*100;
-  function clampVal(v){ return Math.min(Math.max(v,min),max); }
-  function posToVal(clientX){
-    const rect = trackRef.current.getBoundingClientRect();
-    const ratio = (clientX - rect.left) / rect.width;
-    return clampVal(Math.round(min + ratio*(max-min))||min);
-  }
-  function startDrag(which, evt){
-    evt.preventDefault();
-    const move = (e)=>{
-      const val = posToVal(e.clientX || (e.touches && e.touches[0]?.clientX));
-      if(which==='start'){
-        const newStart = Math.min(val, eValRef.current-1>=min? eValRef.current-1: eValRef.current);
-        onChange({ start:newStart, end:eValRef.current });
-      } else {
-        const newEnd = Math.max(val, sValRef.current+1<=max? sValRef.current+1: sValRef.current);
-        onChange({ start:sValRef.current, end:newEnd });
-      }
-    };
-    const up = ()=>{ window.removeEventListener('mousemove',move); window.removeEventListener('touchmove',move); window.removeEventListener('mouseup',up); window.removeEventListener('touchend',up); };
-    window.addEventListener('mousemove',move);
-    window.addEventListener('touchmove',move,{passive:false});
-    window.addEventListener('mouseup',up); window.addEventListener('touchend',up);
-  }
-  const sValRef = useRef(s); sValRef.current=s;
-  const eValRef = useRef(e); eValRef.current=e;
-  return (
-    <div className="w-full select-none py-1">
-      <div ref={trackRef} className="relative h-2 rounded-full bg-slate-200 dark:bg-slate-700">
-        <div className="absolute h-2 rounded-full bg-indigo-500 dark:bg-indigo-400" style={{left:`${leftPct}%`, width:`${rightPct-leftPct}%`}} />
-        <button type="button" aria-label="Start" onMouseDown={e=>startDrag('start',e)} onTouchStart={e=>startDrag('start',e)} className="absolute -top-1 w-4 h-4 rounded-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-500 shadow" style={{left:`calc(${leftPct}% - 8px)`}} />
-        <button type="button" aria-label="End" onMouseDown={e=>startDrag('end',e)} onTouchStart={e=>startDrag('end',e)} className="absolute -top-1 w-4 h-4 rounded-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-500 shadow" style={{left:`calc(${rightPct}% - 8px)`}} />
-      </div>
-      <div className="mt-1 flex justify-between text-[10px] text-slate-500 dark:text-slate-400"><span>{s}</span><span>{e===max? `${e} (end)`: e}</span></div>
-    </div>
-  );
-}
+// (Verse range slider removed)
 
 // Main component
 export default function BibleApp(){
@@ -336,6 +294,8 @@ export default function BibleApp(){
       ;
   },[searchResults,bible]);
   const [selectedBooks,setSelectedBooks]=useState([]); const [selectedChapters,setSelectedChapters]=useState([]);
+  // Show/Hide Statistics & Filters (hidden by default, mobile-first)
+  const [showStats,setShowStats] = useState(false);
   // Mobile behavior ----------------------------------------------------
   // Removed desktop layout; single mobile-style layout
   const [showControls,setShowControls]=useState(false); // bottom-sheet visibility on mobile
@@ -351,8 +311,7 @@ export default function BibleApp(){
   const [mVersion,setMVersion] = useState('');
   const [mBookIdx,setMBookIdx] = useState(0);
   const [mChapterIdx,setMChapterIdx] = useState(0);
-  const [mVStart,setMVStart] = useState(1);
-  const [mVEnd,setMVEnd] = useState(0);
+  // Verse range controls removed; always show whole chapter in Read mode
   const [mQuery,setMQuery] = useState('');
   const [mSearchScope,setMSearchScope] = useState('all');
   const [mChapFrom,setMChapFrom] = useState(1);
@@ -426,12 +385,10 @@ export default function BibleApp(){
   // Sync mobile staged state when opening controls
   useEffect(()=>{
     if(!showControls) return;
-    if(mode==='read'){
+  if(mode==='read'){
       setMVersion(version);
       setMBookIdx(bookIdx);
       setMChapterIdx(chapterIdx);
-      setMVStart(vStart);
-      setMVEnd(vEnd);
     } else {
       setMVersion(version);
       setMQuery(queryInput);
@@ -550,10 +507,10 @@ export default function BibleApp(){
     }
     setShowChapterPicker(true);
   }
-  function applyBookPicker(){ setMBookIdx(tempBookIdx); setMChapterIdx(0); setMVStart(1); setMVEnd(0); setShowBookPicker(false); }
+  function applyBookPicker(){ setMBookIdx(tempBookIdx); setMChapterIdx(0); setShowBookPicker(false); }
   function applyChapterPicker(){
     if(mode==='read'){
-      setMChapterIdx(tempChapterIdx); setMVStart(1); setMVEnd(0);
+      setMChapterIdx(tempChapterIdx);
     } else {
       // In search mode treat chapter picker as selecting a single chapter range
       const chap=tempChapterIdx+1; setMChapFrom(chap); setMChapTo(chap);
@@ -565,8 +522,9 @@ export default function BibleApp(){
     const commit = ()=>{
       setBookIdx(mBookIdx);
       setChapterIdx(mChapterIdx);
-      setVStart(mVStart);
-      setVEnd(mVEnd);
+  // Always show full chapter
+  setVStart(1);
+  setVEnd(0);
       // Reset read scroll position to top when applying reading changes
       try { setReadScrollY(0); } catch {}
       // After state updates commit, ensure the container scrolls to top
@@ -587,8 +545,9 @@ export default function BibleApp(){
     const commit = ()=>{
       setSearchMode(mSearchMode);
       setSearchScope(mSearchScope);
-      setBookIdx(mBookIdx);
-      setChapFrom(mChapFrom);
+  // Always show full chapter
+  setVStart(1);
+  setVEnd(0);
       setChapTo(mChapTo);
       setCaseSensitive(mCaseSensitive);
       // Set both input and effective query immediately
@@ -731,59 +690,108 @@ export default function BibleApp(){
     </div>
     {/* Search Pane */}
     <div ref={searchPaneRef} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'auto', display: mode==='search'? 'block':'none' }} className="pr-1">
-        {!searchResults.exceeded && (
-                <motion.div id="statistics-panel" layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm transition-colors">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Statistics & Filters</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 space-x-3">
-                      <span>Total matches: {searchResults.totalMatches}</span>
-                      {(selectedBooks.length||selectedChapters.length) && <button className="text-blue-600 dark:text-blue-400 hover:underline" onClick={resetSelections}>Clear selection</button>}
-                    </div>
+        {/* Statistics & Filters toggle (hidden by default) */}
+        <div className="mb-3 flex items-center justify-end">
+          <button
+            onClick={()=> setShowStats(s=>!s)}
+            className={classNames(
+              'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium',
+              showStats
+                ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600'
+                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+            )}
+            aria-expanded={showStats}
+          >
+            {showStats? 'Hide' : 'Show'} Statistics & Filters
+          </button>
+        </div>
+        {showStats && !searchResults.exceeded && (
+          <motion.div id="statistics-panel" layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Statistics & Filters</div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 space-x-3">
+                <span>Total matches: {searchResults.totalMatches}</span>
+                {(selectedBooks.length||selectedChapters.length) && <button className="text-blue-600 dark:text-blue-400 hover:underline" onClick={resetSelections}>Clear selection</button>}
+              </div>
+            </div>
+            {/* Mobile-first single card with inline drill-down; make inner area scrollable */}
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              <div className="w-full rounded-2xl border border-slate-100 dark:border-slate-700 p-3 bg-slate-50/50 dark:bg-slate-800/40">
+                {/* Books chart */}
+                <div className="mb-3 flex items-center justify-between text-xs font-medium text-slate-600 dark:text-slate-400">
+                  <span>Books with matches</span>
+                  <div className="flex items-center gap-3">
+                    {selectedBooks.length > 0 && (
+                      <span className="text-[10px] text-slate-400">{selectedBooks.length} selected</span>
+                    )}
+                    {(selectedBooks.length||selectedChapters.length) && (
+                      <button className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline" onClick={resetSelections}>Clear</button>
+                    )}
                   </div>
-                  <div className="space-y-10">
-                    <div>
-                      <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400 mb-2"><span>Books</span><span className="text-[10px] text-slate-400">{selectedBooks.length? `${selectedBooks.length} selected`:'click to select'}</span></div>
-                      <div className="w-full h-[320px]">
+                </div>
+                <div className="w-full">
+                  <div className="w-full" style={{ height: Math.max(360, (topBooks?.length||0) * 28 + 140) }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart layout="vertical" data={topBooks} margin={{left: 16, right: 24, top: 8, bottom: 8}}>
+                        <CartesianGrid horizontal={true} vertical={false} strokeDasharray="3 3" stroke={theme==='dark'? '#334155':'#e2e8f0'} />
+                        <XAxis type="number" allowDecimals={false} tick={{fontSize:11, fill: theme==='dark'? '#cbd5e1':'#1e293b'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
+                        <YAxis type="category" dataKey="name" width={200} tick={{fontSize:13, fill: theme==='dark'? '#cbd5e1':'#0f172a'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
+                        <Tooltip cursor={{fill: theme==='dark'? '#1e293b':'#f1f5f9'}} contentStyle={{background: theme==='dark'? '#0f172a':'white', border: '1px solid', borderColor: theme==='dark'? '#334155':'#e2e8f0', color: theme==='dark'? '#f1f5f9':'#0f172a'}} />
+                        <Bar dataKey="count" barSize={22} radius={[0,4,4,0]} onClick={(d)=> toggleBook(d.name)} className="cursor-pointer" isAnimationActive={false}>
+                          <LabelList dataKey="count" position="right" style={{fontSize:12, fill: theme==='dark'? '#e2e8f0':'#0f172a', fontWeight:600}} />
+                          {topBooks.map((entry,index)=>(
+                            <Cell key={`book-v-${index}`} fill={selectedBooks.includes(entry.name)? (theme==='dark'? '#0ea5e9':'#2563eb'):(theme==='dark'? '#64748b':'#94a3b8')} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {selectedBooks.length!==1 && (
+                    <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Select one book to drill into chapters.</div>
+                  )}
+                </div>
+
+                {/* Inline drill-down: Chapters for selected book */}
+                {selectedBooks.length===1 && (
+                  <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 p-3 bg-white/60 dark:bg-slate-900/40">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                        Chapters in <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedBooks[0]}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
+                        {selectedChapters.length>0 && <span>{selectedChapters.length} selected</span>}
+                        <button className="underline decoration-dotted" onClick={()=> setSelectedBooks([])}>Back to books</button>
+                      </div>
+                    </div>
+                    {chapterBreakdown.length ? (
+                      <div className="w-full" style={{ height: Math.max(340, chapterBreakdown.length * 26 + 120) }}>
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={topBooks} margin={{left:12, right:24, top:10, bottom:70}}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={theme==='dark'? '#334155':'#e2e8f0'} />
-                            <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={70} tick={{fontSize:11, fill: theme==='dark'? '#cbd5e1':'#1e293b'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
-                            <YAxis allowDecimals={false} width={40} tick={{fontSize:11, fill: theme==='dark'? '#cbd5e1':'#1e293b'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
+                          <BarChart layout="vertical" data={chapterBreakdown} margin={{left: 16, right: 24, top: 8, bottom: 8}}>
+                            <CartesianGrid horizontal={true} vertical={false} strokeDasharray="3 3" stroke={theme==='dark'? '#334155':'#e2e8f0'} />
+                            <XAxis type="number" allowDecimals={false} tick={{fontSize:11, fill: theme==='dark'? '#cbd5e1':'#1e293b'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
+                            <YAxis type="category" dataKey="name" width={90} tick={{fontSize:12, fill: theme==='dark'? '#cbd5e1':'#0f172a'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
                             <Tooltip cursor={{fill: theme==='dark'? '#1e293b':'#f1f5f9'}} contentStyle={{background: theme==='dark'? '#0f172a':'white', border: '1px solid', borderColor: theme==='dark'? '#334155':'#e2e8f0', color: theme==='dark'? '#f1f5f9':'#0f172a'}} />
-                            <Bar dataKey="count" barSize={24} radius={[4,4,0,0]} onClick={(d)=> toggleBook(d.name)} className="cursor-pointer" isAnimationActive={false}>
-                              <LabelList dataKey="count" position="top" style={{fontSize:11, fill: theme==='dark'? '#e2e8f0':'#0f172a', fontWeight:500}} />
-                              {topBooks.map((entry,index)=>(<Cell key={`book-v-${index}`} fill={selectedBooks.includes(entry.name)? (theme==='dark'? '#0d9488':'#0f766e'):(theme==='dark'? '#64748b':'#94a3b8')} />))}
+                            <Bar dataKey="count" barSize={20} radius={[0,4,4,0]} onClick={(d)=> toggleChapter(`${selectedBooks[0]} ${d.name}`)} className="cursor-pointer" isAnimationActive={false}>
+                              <LabelList dataKey="count" position="right" style={{fontSize:11, fill: theme==='dark'? '#e2e8f0':'#0f172a', fontWeight:500}} />
+                              {chapterBreakdown.map((entry,index)=>(
+                                <Cell key={`chap-v-${index}`} fill={selectedChapters.includes(`${selectedBooks[0]} ${entry.name}`)? (theme==='dark'? '#22c55e':'#16a34a'):(theme==='dark'? '#475569':'#cbd5e1')} />
+                              ))}
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
-                      {selectedBooks.length!==1 && <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Select one book to drill into chapters.</div>}
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400 mb-2"><span>Chapters {selectedBooks.length===1 && <span className="text-slate-400">in {selectedBooks[0]}</span>}</span><span className="text-[10px] text-slate-400">{selectedChapters.length? `${selectedChapters.length} selected` : (selectedBooks.length===1? 'click to select':'—')}</span></div>
-                      <div className="w-full h-[320px] rounded-xl border border-slate-100 dark:border-slate-700 p-3 bg-slate-50/50 dark:bg-slate-800/40">
-                        {selectedBooks.length===1 ? (
-                          chapterBreakdown.length ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={chapterBreakdown} margin={{left:12,right:24,top:10,bottom:70}}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={theme==='dark'? '#334155':'#e2e8f0'} />
-                                <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={70} tick={{fontSize:11, fill: theme==='dark'? '#cbd5e1':'#1e293b'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
-                                <YAxis allowDecimals={false} width={40} tick={{fontSize:11, fill: theme==='dark'? '#cbd5e1':'#1e293b'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
-                                <Tooltip cursor={{fill: theme==='dark'? '#1e293b':'#f1f5f9'}} contentStyle={{background: theme==='dark'? '#0f172a':'white', border: '1px solid', borderColor: theme==='dark'? '#334155':'#e2e8f0', color: theme==='dark'? '#f1f5f9':'#0f172a'}} />
-                                <Bar dataKey="count" barSize={24} radius={[4,4,0,0]} onClick={(d)=> toggleChapter(`${selectedBooks[0]} ${d.name}`)} className="cursor-pointer" isAnimationActive={false}>
-                                  <LabelList dataKey="count" position="top" style={{fontSize:11, fill: theme==='dark'? '#e2e8f0':'#0f172a', fontWeight:500}} />
-                                  {chapterBreakdown.map((entry,index)=>(<Cell key={`chap-v-${index}`} fill={selectedChapters.includes(`${selectedBooks[0]} ${entry.name}`)? (theme==='dark'? '#0284c7':'#0891b2'):(theme==='dark'? '#475569':'#cbd5e1')} />))}
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          ) : <div className="h-full flex items-center justify-center text-xs text-slate-400">No chapters</div>
-                        ) : <div className="h-full flex items-center justify-center text-xs text-slate-400">Select exactly one book to view chapters</div>}
-                      </div>
-                      <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Verses list is filtered by selected chapters (if any) else by selected books.</div>
-                    </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-xs text-slate-400">No chapters</div>
+                    )}
+                    <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Tap a chapter to filter results. Tap Back to return to all books.</div>
                   </div>
-                </motion.div>
-              )}
+                )}
+
+                <div className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">Results list is filtered by selected chapters (if any) else by selected books.</div>
+              </div>
+            </div>
+          </motion.div>
+        )}
               <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
                 <div className="text-sm text-slate-600 dark:text-slate-400">
                   <span className="font-semibold text-slate-900 dark:text-slate-100">Search Results</span>{' '}
@@ -792,7 +800,7 @@ export default function BibleApp(){
                     {(selectedBooks.length||selectedChapters.length) ? <> · showing <span className="font-semibold">{filteredRows.length}</span></>:null}
                   </> : <span className="text-slate-400">(enter search term)</span>}
                 </div>
-                <div className="mt-4 divide-y divide-slate-100 dark:divide-slate-700">
+    <div className="mt-4 divide-y divide-slate-100 dark:divide-slate-700">
                   {query && !searchResults.exceeded && searchResults.rows.length===0 && <p className="text-slate-500 dark:text-slate-400 text-sm py-6">No matches.</p>}
                   {searchResults.exceeded && (
                     <div className="py-6 text-sm space-y-3">
@@ -800,8 +808,8 @@ export default function BibleApp(){
                       <ul className="list-disc list-inside text-slate-600 dark:text-slate-400 text-xs space-y-1">
                         <li>Add another word or switch to Phrase mode.</li>
                         <li>Use Phrase mode to narrow multi-word searches.</li>
-                        <li>Use a more specific term (e.g. “Jerusalem temple” instead of “the”).</li>
-                        <li>Narrow the verse range (adjust Verse from / to) or jump to a single book.</li>
+      <li>Use a more specific term (e.g. “Jerusalem temple” instead of “the”).</li>
+      <li>Limit scope to a book or chapter using Statistics & Filters.</li>
                         <li>Turn on Case sensitive if you target proper names.</li>
                       </ul>
                     </div>
@@ -872,30 +880,7 @@ export default function BibleApp(){
                       <button onClick={openChapterPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between"><span className="font-medium text-slate-700 dark:text-slate-200 truncate">{mChapterCount? (mChapterIdx+1): '—'}</span><span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span></button>
                       <div className="mt-2 text-[11px] text-slate-600 dark:text-slate-400">Verses in chapter: {mVerseCount||0}</div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="col-span-2">
-                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Verse Range (drag handles)</label>
-                        {/* Inputs removed; slider below */}
-                      </div>
-                    </div>
-                    {mVerseCount > 1 && (
-                      <div className="pt-2 space-y-2">
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                          <span>Range: <span className="font-medium text-slate-700 dark:text-slate-200">{mVStart}</span></span>
-                          <span>to <span className="font-medium text-slate-700 dark:text-slate-200">{mVEnd===0? mVerseCount || 1 : mVEnd}</span>{mVEnd===0 && ' (end)'} </span>
-                        </div>
-                        <DualRange
-                          min={1}
-                          max={mVerseCount||1}
-                          start={mVStart}
-                          end={mVEnd===0? (mVerseCount||1): mVEnd}
-                          onChange={({start,end})=>{
-                            setMVStart(start);
-                            if(end === (mVerseCount||1)) setMVEnd(0); else setMVEnd(end);
-                          }}
-                        />
-                      </div>
-                    )}
+                    {/* Verse range controls removed */}
                     {/* No Search/Statistics buttons here; kept in top bar */}
                   </div>
                 ) : (
