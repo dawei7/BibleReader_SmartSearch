@@ -862,7 +862,7 @@ export default function BibleApp(){
                       <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
                       <button onClick={openBookPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
                         <span className="font-medium text-slate-700 dark:text-slate-200 truncate">
-                          {(()=>{ const b=bible?.[mBookIdx]; if(!b) return '—'; const ab=bookAbbrev(b.name,b.abbrev); return ab? `${ab} · ${b.name}`: b.name; })()}
+                          {(()=>{ const b=bible?.[mBookIdx]; if(!b) return '—'; return b.name; })()}
                         </span>
                         <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
                       </button>
@@ -928,8 +928,8 @@ export default function BibleApp(){
                       <div className="space-y-4">
                         <div>
                           <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Book</label>
-                          <button onClick={openBookPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
-                            <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{(()=>{ const b=bible?.[mBookIdx]; if(!b) return '—'; const ab=bookAbbrev(b.name,b.abbrev); return ab? `${ab} · ${b.name}`: b.name; })()}</span>
+              <button onClick={openBookPicker} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
+                <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{(()=>{ const b=bible?.[mBookIdx]; if(!b) return '—'; return b.name; })()}</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
                           </button>
                         </div>
@@ -1005,8 +1005,8 @@ export default function BibleApp(){
                   </div>
                   <div className="flex-1 overflow-y-auto px-4 py-4">
                     <div className="grid grid-cols-6 gap-2">
-                      {(bible ?? []).map((b,i)=>{ const ab=bookAbbrev(b.name,b.abbrev); const active=i===tempBookIdx; return (
-                        <button key={b.name+i} onClick={()=>{ setTempBookIdx(i); setTempChapterIdx(0); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border tracking-wide', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{ab}</button>
+                      {(bible ?? []).map((b,i)=>{ const active=i===tempBookIdx; return (
+                        <button key={b.name+i} onClick={()=>{ setTempBookIdx(i); setTempChapterIdx(0); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border tracking-wide', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{b.name}</button>
                       ); })}
                     </div>
                   </div>
