@@ -170,6 +170,9 @@ export default function BibleApp(){
     const [highlightInRead,setHighlightInRead]=useState(false);
     const [pendingScrollVerse,setPendingScrollVerse]=useState(null);
   const [stickyReadHeight,setStickyReadHeight]=useState(0);
+  // Scroll position preservation for each mode
+  const [readScrollY,setReadScrollY]=useState(0);
+  const [searchScrollY,setSearchScrollY]=useState(0);
   // Persistence refs
   const storedVersionRef = useRef(null);
   // Initialize persisted theme & version preference
@@ -340,6 +343,10 @@ export default function BibleApp(){
   const headerRef = useRef(null);
   const panelRef = useRef(null); // now only used for overlay scroll area
   const readStickyRef = useRef(null);
+  const readPaneRef = useRef(null);
+  const searchPaneRef = useRef(null);
+  const versesContainerRef = useRef(null);
+  // refs declared once above
   // Mobile-only staged controls state
   const [mVersion,setMVersion] = useState('');
   const [mBookIdx,setMBookIdx] = useState(0);
@@ -376,6 +383,38 @@ export default function BibleApp(){
     window.addEventListener('resize', measure);
     return ()=> window.removeEventListener('resize', measure);
   },[headerHeight, bookIdx, chapterIdx, mode]);
+  // Preserve scroll position per mode
+  const modeRef = useRef(mode);
+  const prevModeRef = useRef(mode);
+  useEffect(()=>{
+    prevModeRef.current = modeRef.current;
+    modeRef.current = mode;
+        
+    // Only restore position if we're switching modes via UI (not jumpTo)
+    // jumpTo will handle its own scrolling via pendingScrollVerse
+    if(!pendingScrollVerse) {
+      const id = requestAnimationFrame(()=>{
+        if(mode === 'read'){
+          try { readPaneRef.current?.scrollTo({ top: readScrollY, behavior: 'auto' }); } catch {}
+        } else {
+          try { searchPaneRef.current?.scrollTo({ top: searchScrollY, behavior: 'auto' }); } catch {}
+        }
+      });
+      return ()=> cancelAnimationFrame(id);
+    }
+  },[mode]);
+
+  // Track scroll positions within panes
+  useEffect(()=>{
+    const r = readPaneRef.current; const s = searchPaneRef.current;
+    let onR, onS;
+    if(r){ onR = ()=> setReadScrollY(r.scrollTop); r.addEventListener('scroll', onR, { passive:true }); }
+    if(s){ onS = ()=> setSearchScrollY(s.scrollTop); s.addEventListener('scroll', onS, { passive:true }); }
+    return ()=>{
+      if(r && onR) r.removeEventListener('scroll', onR);
+      if(s && onS) s.removeEventListener('scroll', onS);
+    };
+  },[]);
   // Removed responsive resize listener (always mobile layout)
   // measure bottom bar height for sheet offset
   useEffect(()=>{
@@ -435,6 +474,11 @@ export default function BibleApp(){
     if(!bible) return;
     const idx = bible.findIndex(b=> b.name===book || b.abbrev===book);
     if(idx>=0){
+      // Save current search scroll position before jumping to read mode
+      if(mode === 'search') {
+        const sTop = searchPaneRef.current?.scrollTop || 0;
+        setSearchScrollY(sTop);
+      }
       setBookIdx(idx);
       setChapterIdx(chapter-1);
       // Show full chapter immediately
@@ -451,19 +495,30 @@ export default function BibleApp(){
     if(pendingScrollVerse==null) return;
     const v = pendingScrollVerse;
     
-    // Use a longer delay to ensure the full chapter renders first
     const timer = setTimeout(()=>{
-      const el = document.querySelector(`[data-verse="${v}"]`);
-      if(el){
-        try { 
-          // Use scrollIntoView which respects the CSS scroll-margin-top
-          el.scrollIntoView({ behavior:'smooth', block:'start' }); 
+      const cont = readPaneRef.current;
+      const abbr = (bible?.[bookIdx]?.abbrev || bible?.[bookIdx]?.name || '').replaceAll(' ','_');
+      const targetId = `v-${abbr}.${chapterIdx+1}.${v}`;
+      const el = cont?.querySelector(`#${CSS.escape(targetId)}`);
+      if(cont && el){
+        try {
+          const doScroll = ()=>{
+            const contRect = cont.getBoundingClientRect();
+            const elRect = el.getBoundingClientRect();
+            const delta = elRect.top - contRect.top;
+            const targetTop = Math.max(0, Math.round(cont.scrollTop + delta - stickyReadHeight));
+            cont.scrollTo({ top: targetTop, behavior: 'auto' });
+          };
+          // Immediate correction
+          doScroll();
+          // Second pass after layout settles
+          setTimeout(()=>{ try { doScroll(); } catch {} }, 60);
         } catch {}
       }
       setPendingScrollVerse(null);
-    }, 300);
+    }, 200);
     return ()=> clearTimeout(timer);
-  },[bookIdx,chapterIdx,pendingScrollVerse]);
+  },[bookIdx,chapterIdx,pendingScrollVerse,stickyReadHeight]);
   // Derived counts for mobile staged selection
   const mChapterCount = bible?.[mBookIdx]?.chapters.length || 0;
   const mVerseCount = bible?.[mBookIdx]?.chapters?.[mChapterIdx]?.length || 0;
@@ -567,7 +622,17 @@ export default function BibleApp(){
                   className={classNames('px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                     // @ts-ignore existing mode
                     mode===t? 'bg-white dark:bg-slate-900 shadow border border-slate-200 dark:border-slate-600':'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white')}
-                  onClick={()=>setMode(t)}
+                  onClick={()=>{
+                    // Save current scroll position before switching modes
+                    if(mode === 'read') {
+                      const rTop = readPaneRef.current?.scrollTop || 0;
+                      setReadScrollY(rTop);
+                    } else {
+                      const sTop = searchPaneRef.current?.scrollTop || 0;
+                      setSearchScrollY(sTop);
+                    }
+                    setMode(t);
+                  }}
                 >{t==='read'? 'Read':'Search'}</button>
               ))}
             </nav>
@@ -629,29 +694,36 @@ export default function BibleApp(){
   {/* (Desktop sidebar code removed) */}
 
   <section className="space-y-6 mt-0 pt-[0px]">
-          {mode==='read' ? (
-            <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
-              <div ref={readStickyRef} className="sticky z-10 -mx-5" style={{ top: Math.max(0, headerHeight - 1) }}>
+        {/* Read Pane */}
+        <div ref={readPaneRef} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'auto', display: mode==='read'? 'block':'none' }} className="pr-1">
+          <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
+              <div ref={readStickyRef} className="sticky z-10 -mx-5" style={{ top: 0 }}>
                 <div className="px-5 py-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
                   <div className="text-sm text-slate-600 dark:text-slate-400"><span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook?.name}</span> Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})</div>
                   <div className="flex items-center gap-2 text-xs">
-                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> { setChapterIdx(c=> clamp(c-1,0,chapterCount-1)); setTimeout(()=> window.scrollTo({ top: 0, behavior: 'smooth' }), 100); }}>◀︎</button>
-                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> { setChapterIdx(c=> clamp(c+1,0,chapterCount-1)); setTimeout(()=> window.scrollTo({ top: 0, behavior: 'smooth' }), 100); }}>▶︎</button>
+                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> { setChapterIdx(c=> clamp(c-1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>◀︎</button>
+                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> { setChapterIdx(c=> clamp(c+1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>▶︎</button>
                   </div>
                 </div>
               </div>
-              <div className="mt-4 space-y-3 leading-8">
-                {readVerses.map(v=> (
-                  <div key={v.n} data-verse={v.n} className="rounded-xl px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ scrollMarginTop: Math.max(0, headerHeight - 1) + stickyReadHeight }}>
+              <div ref={versesContainerRef} className="mt-4 space-y-3 leading-8">
+                {readVerses.map(v=> {
+                  const abbr = (bible?.[bookIdx]?.abbrev || bible?.[bookIdx]?.name || '').replaceAll(' ','_');
+                  const osis = `${abbr}.${chapterIdx+1}.${v.n}`;
+                  return (
+                  // Unique id per verse (OSIS-like): v-<abbr>.<chapter>.<verse>
+                  <div id={`v-${osis}`} data-osis={osis} data-verse={v.n} data-bookidx={bookIdx} data-chapter={chapterIdx+1} data-verseidx={v.n} key={v.n} className="rounded-xl px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ scrollMarginTop: stickyReadHeight + 16 }}>
                     <span className="mr-2 select-none text-slate-400">{v.n}</span>
                     <span>{(highlightInRead && searchObj)? highlightText(v.text, searchObj) : v.text}</span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
-            </motion.div>
-          ) : (
-            <>
-              {!searchResults.exceeded && (
+      </motion.div>
+    </div>
+    {/* Search Pane */}
+    <div ref={searchPaneRef} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'auto', display: mode==='search'? 'block':'none' }} className="pr-1">
+        {!searchResults.exceeded && (
                 <motion.div id="statistics-panel" layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm transition-colors">
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Statistics & Filters</div>
@@ -736,9 +808,8 @@ export default function BibleApp(){
                     </div>
                   )}
                 </div>
-              </motion.div>
-            </>
-          )}
+      </motion.div>
+    </div>
         </section>
       </main>
 
