@@ -423,6 +423,17 @@ export default function BibleApp(){
   useEffect(()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} },[queryInput,version]);
   const chapterBreakdown = useMemo(()=>{ if(searchResults.exceeded) return []; if(selectedBooks.length!==1) return []; const b=selectedBooks[0]; return Object.entries(searchResults.perChap).filter(([k])=> k.startsWith(b+" ")).map(([k,c])=>({ name:k.substring(b.length+1), count:c })).sort((a,b)=> parseInt(a.name)-parseInt(b.name)); },[selectedBooks,searchResults]);
   const filteredRows = useMemo(()=>{ if(!searchResults || searchResults.exceeded) return []; if(selectedChapters.length){ const chapSet=new Set(selectedChapters); return searchResults.rows.filter(r=> chapSet.has(`${r.book} ${r.chapter}`)); } if(selectedBooks.length){ const bookSet=new Set(selectedBooks); return searchResults.rows.filter(r=> bookSet.has(r.book)); } return searchResults.rows; },[searchResults,selectedBooks,selectedChapters]);
+  // Filtered total matches (respect selections); falls back to overall total when no selection
+  const filteredMatchTotal = useMemo(()=>{
+    if(!searchResults || searchResults.exceeded) return 0;
+    if(selectedChapters.length){
+      return selectedChapters.reduce((sum,key)=> sum + (searchResults.perChap[key]||0), 0);
+    }
+    if(selectedBooks.length){
+      return selectedBooks.reduce((sum,name)=> sum + (searchResults.perBook[name]||0), 0);
+    }
+    return searchResults.totalMatches || 0;
+  },[searchResults, selectedBooks, selectedChapters]);
   function toggleBook(name){ setSelectedChapters([]); setSelectedBooks(bs=> bs.includes(name)? bs.filter(b=>b!==name): [...bs,name]); }
   function toggleChapter(chName){ setSelectedChapters(cs=> cs.includes(chName)? cs.filter(c=>c!==chName): [...cs,chName]); }
   function resetSelections(){ setSelectedBooks([]); setSelectedChapters([]); }
@@ -660,9 +671,9 @@ export default function BibleApp(){
   )}
   {/* (Desktop sidebar code removed) */}
 
-  <section className="space-y-6 mt-0 pt-[0px]">
+  <section className="space-y-0 mt-0 pt-[0px]">
         {/* Read Pane */}
-        <div ref={readPaneRef} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'auto', display: mode==='read'? 'block':'none' }} className="pr-1">
+  <div ref={readPaneRef} hidden={mode!=='read'} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'auto' }} className="pr-1">
           <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
               <div ref={readStickyRef} className="sticky z-10 -mx-5" style={{ top: 0 }}>
                 <div className="px-5 py-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
@@ -689,11 +700,20 @@ export default function BibleApp(){
       </motion.div>
     </div>
     {/* Search Pane */}
-    <div ref={searchPaneRef} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'auto', display: mode==='search'? 'block':'none' }} className="pr-1">
-        {/* Statistics & Filters toggle (hidden by default) */}
-        <div className="mb-3 flex items-center justify-end">
+  <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0 }} className="pr-1">
+  {/* Statistics & Filters toggle (hidden by default) */}
+  <div className="sticky top-0 left-0 right-0 z-20 mb-3 w-full flex items-center justify-end bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 pt-0 pb-2" style={{ top: 0, left: 0, right: 0, transform: 'translateZ(0)', willChange: 'top' }}>
           <button
-            onClick={()=> setShowStats(s=>!s)}
+            onClick={()=>{
+              const next = !showStats;
+              setShowStats(next);
+              if(next){
+                try {
+                  // Scroll the search pane to the very top so the panel is visible
+                  searchPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                } catch {}
+              }
+            }}
             className={classNames(
               'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium',
               showStats
@@ -707,88 +727,92 @@ export default function BibleApp(){
         </div>
         {showStats && !searchResults.exceeded && (
           <motion.div id="statistics-panel" layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm transition-colors">
-            <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Statistics & Filters</div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 space-x-3">
-                <span>Total matches: {searchResults.totalMatches}</span>
+        <span>Total matches: {(selectedBooks.length||selectedChapters.length)? filteredMatchTotal : searchResults.totalMatches}</span>
                 {(selectedBooks.length||selectedChapters.length) && <button className="text-blue-600 dark:text-blue-400 hover:underline" onClick={resetSelections}>Clear selection</button>}
               </div>
             </div>
-            {/* Mobile-first single card with inline drill-down; make inner area scrollable */}
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-              <div className="w-full rounded-2xl border border-slate-100 dark:border-slate-700 p-3 bg-slate-50/50 dark:bg-slate-800/40">
-                {/* Books chart */}
-                <div className="mb-3 flex items-center justify-between text-xs font-medium text-slate-600 dark:text-slate-400">
-                  <span>Books with matches</span>
-                  <div className="flex items-center gap-3">
-                    {selectedBooks.length > 0 && (
-                      <span className="text-[10px] text-slate-400">{selectedBooks.length} selected</span>
-                    )}
-                    {(selectedBooks.length||selectedChapters.length) && (
-                      <button className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline" onClick={resetSelections}>Clear</button>
-                    )}
-                  </div>
-                </div>
-                <div className="w-full">
-                  <div className="w-full" style={{ height: Math.max(360, (topBooks?.length||0) * 28 + 140) }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart layout="vertical" data={topBooks} margin={{left: 16, right: 24, top: 8, bottom: 8}}>
-                        <CartesianGrid horizontal={true} vertical={false} strokeDasharray="3 3" stroke={theme==='dark'? '#334155':'#e2e8f0'} />
-                        <XAxis type="number" allowDecimals={false} tick={{fontSize:11, fill: theme==='dark'? '#cbd5e1':'#1e293b'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
-                        <YAxis type="category" dataKey="name" width={200} tick={{fontSize:13, fill: theme==='dark'? '#cbd5e1':'#0f172a'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
-                        <Tooltip cursor={{fill: theme==='dark'? '#1e293b':'#f1f5f9'}} contentStyle={{background: theme==='dark'? '#0f172a':'white', border: '1px solid', borderColor: theme==='dark'? '#334155':'#e2e8f0', color: theme==='dark'? '#f1f5f9':'#0f172a'}} />
-                        <Bar dataKey="count" barSize={22} radius={[0,4,4,0]} onClick={(d)=> toggleBook(d.name)} className="cursor-pointer" isAnimationActive={false}>
-                          <LabelList dataKey="count" position="right" style={{fontSize:12, fill: theme==='dark'? '#e2e8f0':'#0f172a', fontWeight:600}} />
-                          {topBooks.map((entry,index)=>(
-                            <Cell key={`book-v-${index}`} fill={selectedBooks.includes(entry.name)? (theme==='dark'? '#0ea5e9':'#2563eb'):(theme==='dark'? '#64748b':'#94a3b8')} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  {selectedBooks.length!==1 && (
-                    <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Select one book to drill into chapters.</div>
-                  )}
-                </div>
-
-                {/* Inline drill-down: Chapters for selected book */}
-                {selectedBooks.length===1 && (
-                  <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 p-3 bg-white/60 dark:bg-slate-900/40">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                        Chapters in <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedBooks[0]}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
-                        {selectedChapters.length>0 && <span>{selectedChapters.length} selected</span>}
-                        <button className="underline decoration-dotted" onClick={()=> setSelectedBooks([])}>Back to books</button>
+            {/* Unified Books×Chapters heatmap (one graph), mobile-first, scrollable */}
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+              {(()=>{
+                const countsByChap = searchResults?.perChap || {};
+                const allBooks = (topBooks||[]).map(b=> b.name);
+                const maxChapters = Math.max(1, ...((bible||[]).filter(b=> allBooks.includes(b.name)).map(b=> b.chapters.length)));
+                const maxCount = Math.max(1, ...Object.values(countsByChap));
+                const cellSize = 26; // px
+                const labelW = 200; // px for readable book labels
+                function colorFor(val){
+                  if(!val) return theme==='dark'? 'rgba(148,163,184,0.15)':'rgba(15,23,42,0.05)';
+                  const t = Math.min(1, val / maxCount);
+                  // teal-blue scale in light; cyan-teal in dark
+                  const light = `rgba(37, 99, 235, ${0.15 + t*0.75})`;
+                  const dark  = `rgba(14, 165, 233, ${0.25 + t*0.65})`;
+                  return theme==='dark'? dark : light;
+                }
+                const Heatmap = (
+                  <div className="w-full rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40">
+                    {/* Horizontal scroll area for chapters */}
+                    <div className="overflow-x-auto">
+                      {/* Spacer to align with sticky book labels */}
+                      <div className="px-3 pt-3" />
+                      <div className="px-3 py-3" style={{ minWidth: (labelW + maxChapters*cellSize) }}>
+                        {/* Rows */}
+                        {(topBooks||[]).map(({name:bookName})=>{
+                          const book = (bible||[]).find(b=> b.name===bookName);
+                          const chapters = book?.chapters?.length || 0;
+                          return (
+                            <div key={bookName} className="flex items-center gap-2 mb-2 last:mb-0">
+                              {/* Sticky book label */}
+                              <button
+                                type="button"
+                                onClick={()=> toggleBook(bookName)}
+                                className={classNames(
+                                  'sticky left-0 z-10 w-[200px] shrink-0 text-right pr-3 py-1 rounded-md border bg-white/80 dark:bg-slate-900/80 backdrop-blur',
+                                  'text-[12px] font-medium',
+                                  selectedBooks.includes(bookName)
+                                    ? 'border-slate-400 dark:border-slate-600 text-slate-900 dark:text-slate-100'
+                                    : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                                )}
+                                title={`Toggle book: ${bookName}`}
+                              >{bookName}</button>
+                              {/* Chapter cells */}
+                              <div className="flex">
+                                {Array.from({length: maxChapters}, (_,i)=> i+1).map(ch=>{
+                                  const key = `${bookName} ${ch}`;
+                                  const val = ch <= chapters ? (countsByChap[key]||0) : null;
+                                  const selected = selectedChapters.includes(key);
+                                  return (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      onClick={()=> ch <= chapters && toggleChapter(key)}
+                                      className={classNames('relative inline-flex items-center justify-center m-[2px] rounded-md border',
+                                        ch<=chapters
+                                          ? (selected ? 'ring-2 ring-emerald-500 border-emerald-600' : 'border-slate-200 dark:border-slate-700')
+                                          : 'opacity-20 border-transparent pointer-events-none'
+                                      )}
+                                      title={ch<=chapters ? `${bookName} ${ch}: ${val||0}` : ''}
+                                      style={{ width: cellSize, height: cellSize, background: colorFor(val||0) }}
+                                    >
+                                      <span className="absolute inset-0 text-[10px] leading-[26px] text-slate-800 dark:text-slate-100 mix-blend-difference select-none">
+                                        {ch<=chapters && (val? '' : '')}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                    {chapterBreakdown.length ? (
-                      <div className="w-full" style={{ height: Math.max(340, chapterBreakdown.length * 26 + 120) }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart layout="vertical" data={chapterBreakdown} margin={{left: 16, right: 24, top: 8, bottom: 8}}>
-                            <CartesianGrid horizontal={true} vertical={false} strokeDasharray="3 3" stroke={theme==='dark'? '#334155':'#e2e8f0'} />
-                            <XAxis type="number" allowDecimals={false} tick={{fontSize:11, fill: theme==='dark'? '#cbd5e1':'#1e293b'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
-                            <YAxis type="category" dataKey="name" width={90} tick={{fontSize:12, fill: theme==='dark'? '#cbd5e1':'#0f172a'}} stroke={theme==='dark'? '#475569':'#94a3b8'} />
-                            <Tooltip cursor={{fill: theme==='dark'? '#1e293b':'#f1f5f9'}} contentStyle={{background: theme==='dark'? '#0f172a':'white', border: '1px solid', borderColor: theme==='dark'? '#334155':'#e2e8f0', color: theme==='dark'? '#f1f5f9':'#0f172a'}} />
-                            <Bar dataKey="count" barSize={20} radius={[0,4,4,0]} onClick={(d)=> toggleChapter(`${selectedBooks[0]} ${d.name}`)} className="cursor-pointer" isAnimationActive={false}>
-                              <LabelList dataKey="count" position="right" style={{fontSize:11, fill: theme==='dark'? '#e2e8f0':'#0f172a', fontWeight:500}} />
-                              {chapterBreakdown.map((entry,index)=>(
-                                <Cell key={`chap-v-${index}`} fill={selectedChapters.includes(`${selectedBooks[0]} ${entry.name}`)? (theme==='dark'? '#22c55e':'#16a34a'):(theme==='dark'? '#475569':'#cbd5e1')} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-xs text-slate-400">No chapters</div>
-                    )}
-                    <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Tap a chapter to filter results. Tap Back to return to all books.</div>
+                    <div className="px-3 pb-3 text-[11px] text-slate-500 dark:text-slate-400">Tap a book label to filter by book, or tap chapter cells to filter by chapters. This single graph shows distribution across all chapters for each book.</div>
                   </div>
-                )}
-
-                <div className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">Results list is filtered by selected chapters (if any) else by selected books.</div>
-              </div>
+                );
+                return Heatmap;
+              })()}
             </div>
           </motion.div>
         )}
@@ -796,7 +820,7 @@ export default function BibleApp(){
                 <div className="text-sm text-slate-600 dark:text-slate-400">
                   <span className="font-semibold text-slate-900 dark:text-slate-100">Search Results</span>{' '}
                   {query ? <>
-                    for “{query}” {searchScope==='book' && currentBook ? <>in <span className="font-semibold">{currentBook.name}</span> </>: null}— {searchResults.totalMatches}{searchResults.exceeded && ' (too many, limit exceeded)'} matches
+                    for “{query}” {searchScope==='book' && currentBook ? <>in <span className="font-semibold">{currentBook.name}</span> </>: null}— {(selectedBooks.length||selectedChapters.length)? filteredMatchTotal : searchResults.totalMatches}{searchResults.exceeded && ' (too many, limit exceeded)'} matches
                     {(selectedBooks.length||selectedChapters.length) ? <> · showing <span className="font-semibold">{filteredRows.length}</span></>:null}
                   </> : <span className="text-slate-400">(enter search term)</span>}
                 </div>
