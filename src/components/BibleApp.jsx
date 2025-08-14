@@ -567,6 +567,14 @@ export default function BibleApp(){
       setChapterIdx(mChapterIdx);
       setVStart(mVStart);
       setVEnd(mVEnd);
+      // Reset read scroll position to top when applying reading changes
+      try { setReadScrollY(0); } catch {}
+      // After state updates commit, ensure the container scrolls to top
+      requestAnimationFrame(()=>{
+        try { readPaneRef.current?.scrollTo({ top: 0, behavior: 'auto' }); } catch {}
+        // Second pass in case layout shifts after render
+        setTimeout(()=>{ try { readPaneRef.current?.scrollTo({ top: 0, behavior: 'auto' }); } catch {} }, 60);
+      });
       setShowControls(false);
     };
     if(mVersion && mVersion!==version){
