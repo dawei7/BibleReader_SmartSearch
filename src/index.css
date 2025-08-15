@@ -13,3 +13,62 @@ body {
 mark {
   @apply bg-yellow-200/60;
 }
+
+/* Statistics overlay horizontal scrollbar: hide track to avoid light strip */
+.stats-scroll {
+  scrollbar-width: none; /* Firefox */
+}
+.stats-scroll::-webkit-scrollbar {
+  /* Chrome/Safari/Edge */
+  display: none;
+}
+
+/* Fancy top horizontal scrollbar for Statistics overlay */
+.fancy-hscroll {
+  position: relative;
+  width: 100%;
+  height: 14px; /* visible height */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin; /* Firefox show thin fancy bar */
+  scrollbar-color: #6d28d9 rgba(2, 6, 23, 0.05);
+  background: linear-gradient(
+    180deg,
+    rgba(2, 6, 23, 0.08),
+    rgba(2, 6, 23, 0.04)
+  );
+  border-radius: 9999px; /* full */
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+}
+.dark .fancy-hscroll {
+  background: linear-gradient(
+    180deg,
+    rgba(148, 163, 184, 0.25),
+    rgba(148, 163, 184, 0.15)
+  );
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+.fancy-hscroll::-webkit-scrollbar {
+  height: 10px;
+}
+.fancy-hscroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fancy-hscroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #6366f1, #22d3ee);
+  border-radius: 9999px;
+  border: 2px solid transparent; /* creates pill thumb */
+}
+.fancy-hscroll:hover::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #4f46e5, #06b6d4);
+}
+
+/* Hide the fancy bar on touch-only devices; keep for precise pointers */
+@media (hover: none) and (pointer: coarse) {
+  .fancy-hscroll {
+    display: none;
+  }
+}

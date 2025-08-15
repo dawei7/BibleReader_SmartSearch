@@ -329,6 +329,9 @@ export default function BibleApp(){
   const [headerHeight,setHeaderHeight]=useState(72); // may be used for future spacing
   const [bottomBarH,setBottomBarH]=useState(52);
   const caseSensitiveRef = useRef(null);
+  // Stats overlay scrollers (top mirror and main content)
+  const statsTopScrollRef = useRef(null);
+  const statsMainScrollRef = useRef(null);
 
   // measure header + panel sizes for dynamic spacing on mobile
   // Simplified: only track header height (static) for potential future offset
@@ -406,10 +409,10 @@ export default function BibleApp(){
     onScroll();
     return ()=> window.removeEventListener('scroll',onScroll);
   },[]);
-  // Lock background scroll when full-screen overlays open (controls/about)
+  // Lock background scroll when full-screen overlays open (controls/about/stats)
   useEffect(()=>{
     const body = document.body;
-    const needLock = showControls || showAbout;
+    const needLock = showControls || showAbout || showStats;
     if(needLock){
       const prev = body.style.overflow;
       body.dataset._prevOverflow = prev;
@@ -418,7 +421,30 @@ export default function BibleApp(){
       body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow;
     }
     return ()=>{ if(body.dataset._prevOverflow!==undefined){ body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow; } };
-  },[showControls,showAbout]);
+  },[showControls,showAbout,showStats]);
+  // Sync the top fancy scrollbar with the hidden main horizontal scroller in Statistics overlay
+  useEffect(()=>{
+    if(!showStats) return;
+    const top = statsTopScrollRef.current;
+    const main = statsMainScrollRef.current;
+    if(!top || !main) return;
+    let syncing = false;
+    const fromTop = ()=>{
+      if(syncing) return; syncing = true; try { main.scrollLeft = top.scrollLeft; } finally { syncing = false; }
+    };
+    const fromMain = ()=>{
+      if(syncing) return; syncing = true; try { top.scrollLeft = main.scrollLeft; } finally { syncing = false; }
+    };
+    // Initialize alignment after layout
+    const id = requestAnimationFrame(()=>{ try { top.scrollLeft = main.scrollLeft; } catch {} });
+    top.addEventListener('scroll', fromTop, { passive:true });
+    main.addEventListener('scroll', fromMain, { passive:true });
+    return ()=>{
+      cancelAnimationFrame(id);
+      top.removeEventListener('scroll', fromTop);
+      main.removeEventListener('scroll', fromMain);
+    };
+  },[showStats]);
   // Selections cleared inline when version or search input changes; also defensively here if query/version changed elsewhere
   useEffect(()=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} },[queryInput,version]);
   const chapterBreakdown = useMemo(()=>{ if(searchResults.exceeded) return []; if(selectedBooks.length!==1) return []; const b=selectedBooks[0]; return Object.entries(searchResults.perChap).filter(([k])=> k.startsWith(b+" ")).map(([k,c])=>({ name:k.substring(b.length+1), count:c })).sort((a,b)=> parseInt(a.name)-parseInt(b.name)); },[selectedBooks,searchResults]);
@@ -669,6 +695,111 @@ export default function BibleApp(){
       </div>
     </div>
   )}
+  {showStats && (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+      <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Statistics & Filters</div>
+          <div className="flex items-center gap-2">
+            {(selectedBooks.length||selectedChapters.length) && (
+              <button className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" onClick={resetSelections}>Clear</button>
+            )}
+            <button onClick={()=> setShowStats(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Close</button>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-0 sm:px-4 py-3">
+        {searchResults?.exceeded ? (
+          <div className="mx-4 sm:mx-0 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
+            Too many matches to show statistics. Please refine your search.
+          </div>
+        ) : (
+          <div className="-mx-4 sm:mx-0">
+            {(()=>{
+              const countsByChap = searchResults?.perChap || {};
+              const allBooks = (topBooks||[]).map(b=> b.name);
+              const maxChapters = Math.max(1, ...((bible||[]).filter(b=> allBooks.includes(b.name)).map(b=> b.chapters.length)));
+              const maxCount = Math.max(1, ...Object.values(countsByChap));
+              const cellSize = 26; // px
+              function colorFor(val){
+                if(!val) return theme==='dark'? 'rgba(148,163,184,0.15)':'rgba(15,23,42,0.05)';
+                const t = Math.min(1, val / maxCount);
+                const light = `rgba(37, 99, 235, ${0.15 + t*0.75})`;
+                const dark  = `rgba(14, 165, 233, ${0.25 + t*0.65})`;
+                return theme==='dark'? dark : light;
+              }
+              return (
+                  <div className="w-full rounded-none sm:rounded-2xl border-t sm:border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40">
+                    {/* Fancy top scrollbar (synced with the hidden bottom scroller) */}
+                    <div className="pt-3">
+                      <div ref={statsTopScrollRef} className="fancy-hscroll rounded-full" aria-label="Scroll chapters horizontally">
+                        <div style={{ width: (maxChapters*(cellSize + 4)), height: 1 }} />
+                      </div>
+                    </div>
+                    <div className="overflow-hidden pb-1 -mb-1">
+                    <div ref={statsMainScrollRef} className="overflow-x-auto stats-scroll">
+                    <div className="px-0 py-3" style={{ minWidth: (maxChapters*(cellSize + 4)) }}>
+                      {(topBooks||[]).map(({name:bookName})=>{
+                        const book = (bible||[]).find(b=> b.name===bookName);
+                        const chapters = book?.chapters?.length || 0;
+                        return (
+                          <div key={bookName} className="relative mb-2 last:mb-0">
+                            <button
+                              type="button"
+                              onClick={()=> toggleBook(bookName)}
+                              className={classNames(
+                                'absolute left-0 top-1/2 -translate-y-1/2 z-10 px-1 py-0.5 rounded text-[12px] font-semibold bg-transparent',
+                                selectedBooks.includes(bookName)
+                                  ? 'text-slate-900 dark:text-slate-100'
+                                  : 'text-slate-700 dark:text-slate-300'
+                              )}
+                              style={{
+                                textShadow: theme==='dark'
+                                  ? '0 1px 1px rgba(0,0,0,0.5)'
+                                  : '0 1px 1px rgba(255,255,255,0.9)'
+                              }}
+                              title={`Toggle book: ${bookName}`}
+                            >{bookName}</button>
+                            <div className="flex -mx-[2px]">
+                              {Array.from({length: maxChapters}, (_,i)=> i+1).map(ch=>{
+                                const key = `${bookName} ${ch}`;
+                                const val = ch <= chapters ? (countsByChap[key]||0) : null;
+                                const selected = selectedChapters.includes(key);
+                                return (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={()=> ch <= chapters && toggleChapter(key)}
+                                    className={classNames('relative inline-flex items-center justify-center m-[2px] rounded-md border',
+                                      ch<=chapters
+                                        ? (selected ? 'ring-2 ring-emerald-500 border-emerald-600' : 'border-slate-200 dark:border-slate-700')
+                                        : 'opacity-20 border-transparent pointer-events-none'
+                                    )}
+                                    title={ch<=chapters ? `${bookName} ${ch}: ${val||0}` : ''}
+                                    style={{ width: cellSize, height: cellSize, background: colorFor(val||0) }}
+                                  >
+                                    <span className="absolute inset-0 text-[10px] leading-[26px] text-slate-800 dark:text-slate-100 mix-blend-difference select-none">
+                                      {ch<=chapters && (val? '' : '')}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  </div>
+                  <div className="px-4 pb-3 text-[11px] text-slate-500 dark:text-slate-400">Tap a book label to filter by book, or tap chapter cells to filter by chapters. This single graph shows distribution across all chapters for each book.</div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+    </div>
+  )}
   {/* (Desktop sidebar code removed) */}
 
   <section className="space-y-0 mt-0 pt-[0px]">
@@ -700,7 +831,7 @@ export default function BibleApp(){
       </motion.div>
     </div>
     {/* Search Pane */}
-  <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0 }} className="pr-1">
+  <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0 }} className="pr-0 md:pr-1">
   {/* Statistics & Filters toggle (hidden by default) */}
   <div className="sticky top-0 left-0 right-0 z-20 mb-3 w-full flex items-center justify-end bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 pt-0 pb-2" style={{ top: 0, left: 0, right: 0, transform: 'translateZ(0)', willChange: 'top' }}>
           <button
@@ -725,97 +856,7 @@ export default function BibleApp(){
             {showStats? 'Hide' : 'Show'} Statistics & Filters
           </button>
         </div>
-        {showStats && !searchResults.exceeded && (
-          <motion.div id="statistics-panel" layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm transition-colors">
-      <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Statistics & Filters</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 space-x-3">
-        <span>Total matches: {(selectedBooks.length||selectedChapters.length)? filteredMatchTotal : searchResults.totalMatches}</span>
-                {(selectedBooks.length||selectedChapters.length) && <button className="text-blue-600 dark:text-blue-400 hover:underline" onClick={resetSelections}>Clear selection</button>}
-              </div>
-            </div>
-            {/* Unified Books×Chapters heatmap (one graph), mobile-first, scrollable */}
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-              {(()=>{
-                const countsByChap = searchResults?.perChap || {};
-                const allBooks = (topBooks||[]).map(b=> b.name);
-                const maxChapters = Math.max(1, ...((bible||[]).filter(b=> allBooks.includes(b.name)).map(b=> b.chapters.length)));
-                const maxCount = Math.max(1, ...Object.values(countsByChap));
-                const cellSize = 26; // px
-                const labelW = 200; // px for readable book labels
-                function colorFor(val){
-                  if(!val) return theme==='dark'? 'rgba(148,163,184,0.15)':'rgba(15,23,42,0.05)';
-                  const t = Math.min(1, val / maxCount);
-                  // teal-blue scale in light; cyan-teal in dark
-                  const light = `rgba(37, 99, 235, ${0.15 + t*0.75})`;
-                  const dark  = `rgba(14, 165, 233, ${0.25 + t*0.65})`;
-                  return theme==='dark'? dark : light;
-                }
-                const Heatmap = (
-                  <div className="w-full rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40">
-                    {/* Horizontal scroll area for chapters */}
-                    <div className="overflow-x-auto">
-                      {/* Spacer to align with sticky book labels */}
-                      <div className="px-3 pt-3" />
-                      <div className="px-3 py-3" style={{ minWidth: (labelW + maxChapters*cellSize) }}>
-                        {/* Rows */}
-                        {(topBooks||[]).map(({name:bookName})=>{
-                          const book = (bible||[]).find(b=> b.name===bookName);
-                          const chapters = book?.chapters?.length || 0;
-                          return (
-                            <div key={bookName} className="flex items-center gap-2 mb-2 last:mb-0">
-                              {/* Sticky book label */}
-                              <button
-                                type="button"
-                                onClick={()=> toggleBook(bookName)}
-                                className={classNames(
-                                  'sticky left-0 z-10 w-[200px] shrink-0 text-right pr-3 py-1 rounded-md border bg-white/80 dark:bg-slate-900/80 backdrop-blur',
-                                  'text-[12px] font-medium',
-                                  selectedBooks.includes(bookName)
-                                    ? 'border-slate-400 dark:border-slate-600 text-slate-900 dark:text-slate-100'
-                                    : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                                )}
-                                title={`Toggle book: ${bookName}`}
-                              >{bookName}</button>
-                              {/* Chapter cells */}
-                              <div className="flex">
-                                {Array.from({length: maxChapters}, (_,i)=> i+1).map(ch=>{
-                                  const key = `${bookName} ${ch}`;
-                                  const val = ch <= chapters ? (countsByChap[key]||0) : null;
-                                  const selected = selectedChapters.includes(key);
-                                  return (
-                                    <button
-                                      key={key}
-                                      type="button"
-                                      onClick={()=> ch <= chapters && toggleChapter(key)}
-                                      className={classNames('relative inline-flex items-center justify-center m-[2px] rounded-md border',
-                                        ch<=chapters
-                                          ? (selected ? 'ring-2 ring-emerald-500 border-emerald-600' : 'border-slate-200 dark:border-slate-700')
-                                          : 'opacity-20 border-transparent pointer-events-none'
-                                      )}
-                                      title={ch<=chapters ? `${bookName} ${ch}: ${val||0}` : ''}
-                                      style={{ width: cellSize, height: cellSize, background: colorFor(val||0) }}
-                                    >
-                                      <span className="absolute inset-0 text-[10px] leading-[26px] text-slate-800 dark:text-slate-100 mix-blend-difference select-none">
-                                        {ch<=chapters && (val? '' : '')}
-                                      </span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="px-3 pb-3 text-[11px] text-slate-500 dark:text-slate-400">Tap a book label to filter by book, or tap chapter cells to filter by chapters. This single graph shows distribution across all chapters for each book.</div>
-                  </div>
-                );
-                return Heatmap;
-              })()}
-            </div>
-          </motion.div>
-        )}
+  {/* Statistics content moved to full-screen overlay above */}
               <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
                 <div className="text-sm text-slate-600 dark:text-slate-400">
                   <span className="font-semibold text-slate-900 dark:text-slate-100">Search Results</span>{' '}
