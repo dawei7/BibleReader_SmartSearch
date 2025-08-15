@@ -128,6 +128,8 @@ export default function BibleApp(){
     const [highlightInRead,setHighlightInRead]=useState(false);
     const [pendingScrollVerse,setPendingScrollVerse]=useState(null);
   const [stickyReadHeight,setStickyReadHeight]=useState(0);
+  // Settings management helpers (import/export/share)
+  // (No visible settings sharing UI; persistence via localStorage happens automatically)
   // Settings overlay and reader preferences
   const [showSettings,setShowSettings] = useState(false);
   const [readerFontSize,setReaderFontSize] = useState(18); // px
@@ -289,6 +291,43 @@ export default function BibleApp(){
 
   // Load and persist reader settings
   useEffect(()=>{
+    // First, check for URL-encoded settings (?s=...)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sParam = params.get('s');
+      if(sParam){
+        const decodeForURL = (s)=>{
+          let b64 = s.replace(/-/g,'+').replace(/_/g,'/');
+          const pad = b64.length % 4; if(pad) b64 += '==='.slice(pad);
+          const json = decodeURIComponent(escape(atob(b64)));
+          return JSON.parse(json);
+        };
+        const payload = decodeForURL(sParam);
+        if(payload && typeof payload==='object'){
+          // theme/version
+          if(payload.theme==='dark' || payload.theme==='light') setTheme(payload.theme);
+          if(typeof payload.version==='string' && payload.version){
+            // async load selected version; ignore failure
+            loadBibleVersion(payload.version);
+          }
+          const s = payload.settings || payload; // allow plain object
+          if(s){
+            if(typeof s.readerFontSize==='number') setReaderFontSize(clamp(s.readerFontSize, 8, 28));
+            if(s.readerFontFamily==='serif' || s.readerFontFamily==='sans') setReaderFontFamily(s.readerFontFamily);
+            if(typeof s.lineHeightPx==='number') setLineHeightPx(clamp(s.lineHeightPx, 12, 64));
+            if(typeof s.readerWidthPct==='number') setReaderWidthPct(clamp(s.readerWidthPct, 20, 100));
+            if(['blocks','continuous'].includes(s.verseLayout)) setVerseLayout(s.verseLayout);
+            if(typeof s.showNumbers==='boolean') setShowNumbers(s.showNumbers);
+            if(['inline','superscript'].includes(s.numberStyle)) setNumberStyle(s.numberStyle);
+            if(typeof s.justifyText==='boolean') setJustifyText(s.justifyText);
+            if(typeof s.hoverHighlight==='boolean') setHoverHighlight(s.hoverHighlight);
+            if(typeof s.autoHighlightInRead==='boolean') setAutoHighlightInRead(s.autoHighlightInRead);
+          }
+          // Clean URL
+          try { const url = new URL(window.location.href); url.searchParams.delete('s'); window.history.replaceState({},'', url.toString()); } catch {}
+        }
+      }
+    } catch { /* ignore */ }
     try {
       const raw = localStorage.getItem('br_reader_settings');
       if(raw){
@@ -993,6 +1032,8 @@ export default function BibleApp(){
           <div className="text-[11px] text-slate-500 dark:text-slate-400">Theme: <button onClick={()=> setTheme('light')} className={classNames('ml-2 px-2 py-1 rounded border text-xs', theme==='light'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Light</button><button onClick={()=> setTheme('dark')} className={classNames('ml-2 px-2 py-1 rounded border text-xs', theme==='dark'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Dark</button></div>
         </div>
 
+  {/* (No visible sharing UI) */}
+
         <div>
           <button
             onClick={()=>{
@@ -1007,7 +1048,6 @@ export default function BibleApp(){
               setJustifyText(false);
               setHoverHighlight(true);
               setAutoHighlightInRead(false);
-              try { localStorage.removeItem('br_reader_settings'); } catch {}
             }}
             className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800"
           >Reset to defaults</button>
