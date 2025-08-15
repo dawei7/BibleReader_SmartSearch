@@ -604,8 +604,8 @@ export default function BibleApp(){
   // Mobile: no extra top padding needed; sticky header occupies layout space
   let dynamicPadTop = 0; // unified layout
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-slate-50 to-zinc-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors">
-  <header ref={headerRef} className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm">
+  <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-white via-slate-50 to-zinc-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors">
+  <header ref={headerRef} className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm border-b border-slate-200 dark:border-slate-700">
   <div className="w-full px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -654,12 +654,12 @@ export default function BibleApp(){
       </header>
 
   <main
-  className="flex-1 w-full px-4 pb-40 transition-[padding]"
+  className="flex-1 w-full px-0 pb-0 overflow-hidden transition-[padding]"
   style={{ paddingTop: 0 }}
       >
   {showAbout && (
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
-      <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+  <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 text-white grid place-content-center font-black tracking-tight text-lg select-none" aria-hidden>
@@ -673,7 +673,7 @@ export default function BibleApp(){
           <button onClick={()=> setShowAbout(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Close</button>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+  <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="space-y-3 text-sm leading-6 text-slate-700 dark:text-slate-300 max-w-2xl">
           <p>
             Hi, I’m <span className="font-medium">David Schmid</span> (born 12 December 1986), a data engineer who loves AI and data science. With the help of GPT‑5 Agent Mode, I built this app to make Bible study fast, focused, and enjoyable.
@@ -804,24 +804,29 @@ export default function BibleApp(){
 
   <section className="space-y-0 mt-0 pt-[0px]">
         {/* Read Pane */}
-  <div ref={readPaneRef} hidden={mode!=='read'} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'auto' }} className="pr-1">
-          <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
-              <div ref={readStickyRef} className="sticky z-10 -mx-5" style={{ top: 0 }}>
-                <div className="px-5 py-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
-                  <div className="text-sm text-slate-600 dark:text-slate-400"><span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook?.name}</span> Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})</div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> { setChapterIdx(c=> clamp(c-1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>◀︎</button>
-                    <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> { setChapterIdx(c=> clamp(c+1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>▶︎</button>
-                  </div>
-                </div>
+  <div ref={readPaneRef} hidden={mode!=='read'} style={{ height: `calc(100vh - ${headerHeight}px)`, overflowY: 'auto', paddingBottom: bottomBarH }} className="">
+          {/* Sticky chapter header stays fixed at the top of the scrollable pane */}
+          <div ref={readStickyRef} className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700">
+            <div className="px-4 py-2 flex items-center justify-between gap-2">
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                <span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook?.name}</span>
+                {" "}Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})
               </div>
-              <div ref={versesContainerRef} className="mt-4 space-y-3 leading-8">
+              <div className="flex items-center gap-2 text-xs">
+                <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> { setChapterIdx(c=> clamp(c-1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>◀︎</button>
+                <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> { setChapterIdx(c=> clamp(c+1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>▶︎</button>
+              </div>
+            </div>
+          </div>
+          {/* Content container below header, rectangular edges */}
+          <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="bg-white dark:bg-slate-900 p-4 shadow-sm scroll-mt-[72px] transition-colors">
+              <div ref={versesContainerRef} className="space-y-3 leading-8">
                 {readVerses.map(v=> {
                   const abbr = (bible?.[bookIdx]?.abbrev || bible?.[bookIdx]?.name || '').replaceAll(' ','_');
                   const osis = `${abbr}.${chapterIdx+1}.${v.n}`;
                   return (
                   // Unique id per verse (OSIS-like): v-<abbr>.<chapter>.<verse>
-                  <div id={`v-${osis}`} data-osis={osis} data-verse={v.n} data-bookidx={bookIdx} data-chapter={chapterIdx+1} data-verseidx={v.n} key={v.n} className="rounded-xl px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ scrollMarginTop: stickyReadHeight + 16 }}>
+                  <div id={`v-${osis}`} data-osis={osis} data-verse={v.n} data-bookidx={bookIdx} data-chapter={chapterIdx+1} data-verseidx={v.n} key={v.n} className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ scrollMarginTop: stickyReadHeight + 8 }}>
                     <span className="mr-2 select-none text-slate-400">{v.n}</span>
                     <span>{(highlightInRead && searchObj)? highlightText(v.text, searchObj) : v.text}</span>
                   </div>
@@ -831,9 +836,9 @@ export default function BibleApp(){
       </motion.div>
     </div>
     {/* Search Pane */}
-  <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight + bottomBarH + 16}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0 }} className="pr-0 md:pr-1">
+  <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0, paddingBottom: bottomBarH }} className="pr-0 bg-white dark:bg-slate-900">
   {/* Statistics & Filters toggle (hidden by default) */}
-  <div className="sticky top-0 left-0 right-0 z-20 mb-3 w-full flex items-center justify-end bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 pt-0 pb-2" style={{ top: 0, left: 0, right: 0, transform: 'translateZ(0)', willChange: 'top' }}>
+  <div className="sticky top-0 left-0 right-0 z-20 mb-0 w-full flex items-center justify-end bg-white/90 dark:bg-slate-900/90 backdrop-blur pt-0 pb-2 px-3 sm:px-4 border-b border-slate-200 dark:border-slate-700" style={{ top: 0, left: 0, right: 0, transform: 'translateZ(0)', willChange: 'top' }}>
           <button
             onClick={()=>{
               const next = !showStats;
@@ -857,7 +862,7 @@ export default function BibleApp(){
           </button>
         </div>
   {/* Statistics content moved to full-screen overlay above */}
-              <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm scroll-mt-[72px] transition-colors">
+              <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="bg-white dark:bg-slate-900 p-5 scroll-mt-[72px] transition-colors">
                 <div className="text-sm text-slate-600 dark:text-slate-400">
                   <span className="font-semibold text-slate-900 dark:text-slate-100">Search Results</span>{' '}
                   {query ? <>
@@ -895,7 +900,7 @@ export default function BibleApp(){
       </main>
 
     {/* Unified bottom bar (was mobile only) */}
-  <div ref={bottomBarRef} className={classNames('fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur pb-[env(safe-area-inset-bottom)] transition-opacity duration-150', showControls && 'opacity-0 pointer-events-none')}>
+  <div ref={bottomBarRef} className={classNames('fixed bottom-0 inset-x-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-t border-slate-200 dark:border-slate-700 pb-[env(safe-area-inset-bottom)] transition-opacity duration-150', showControls && 'opacity-0 pointer-events-none')}>
   <div className="w-full px-3 py-2 grid grid-cols-1">
           <div className="flex justify-center">
             <button aria-expanded={showControls} onClick={()=> setShowControls(v=>!v)} className={classNames('rounded-lg px-4 py-2 border text-sm', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600', showControls && 'ring-1 ring-slate-400/50 dark:ring-slate-500/50')}>Controls</button>
