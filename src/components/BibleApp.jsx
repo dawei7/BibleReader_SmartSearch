@@ -320,7 +320,7 @@ export default function BibleApp(){
         const payload = decodeForURL(sParam);
         if(payload && typeof payload==='object'){
           // theme/version
-          if(payload.theme==='dark' || payload.theme==='light') setTheme(payload.theme);
+          if(payload.theme==='dark' || payload.theme==='light' || payload.theme==='system') setTheme(payload.theme);
           if(typeof payload.version==='string' && payload.version){
             // async load selected version; ignore failure
             loadBibleVersion(payload.version);
@@ -814,11 +814,11 @@ export default function BibleApp(){
             </button>
             {/* Mobile controls toggle now in bottom tab bar */}
             <button
-              onClick={()=> setTheme(th=> th==='dark' ? 'light' : th==='light' ? 'dark' : (systemPrefersDark? 'light':'dark'))}
-              aria-label="Toggle dark mode"
+              onClick={()=> setTheme(th=> th==='system' ? 'light' : th==='light' ? 'dark' : 'system')}
+              aria-label="Cycle theme"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
             >
-              <span className="hidden sm:inline">{(theme==='dark'||(theme==='system'&&systemPrefersDark))? 'Light':'Dark'} mode</span>
+              <span className="hidden sm:inline">{theme==='system' ? 'System' : (theme==='dark' ? 'Dark' : 'Light')}</span>
               <span>{(theme==='dark'||(theme==='system'&&systemPrefersDark))? '☀️':'🌙'}</span>
             </button>
           </div>
@@ -1072,6 +1072,7 @@ export default function BibleApp(){
               setJustifyText(false);
               setHoverHighlight(true);
               setAutoHighlightInRead(false);
+              setTheme('system');
             }}
             className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800"
           >Reset to defaults</button>
