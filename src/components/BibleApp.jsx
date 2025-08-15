@@ -132,15 +132,16 @@ export default function BibleApp(){
   const [showSettings,setShowSettings] = useState(false);
   const [readerFontSize,setReaderFontSize] = useState(18); // px
   const [readerFontFamily,setReaderFontFamily] = useState('sans'); // 'sans' | 'serif'
-  const [lineSpacing,setLineSpacing] = useState('relaxed'); // 'normal' | 'relaxed' | 'loose'
-  const [readerWidth,setReaderWidth] = useState('normal'); // 'narrow' | 'normal' | 'wide' | 'full'
+  // Line height (px) slider replaces old lineSpacing options
+  const [lineHeightPx,setLineHeightPx] = useState(28);
+  const [readerWidth,setReaderWidth] = useState('normal'); // deprecated: kept for migration
+  const [readerWidthPct,setReaderWidthPct] = useState(80); // 20–100
   const [verseLayout,setVerseLayout] = useState('blocks'); // 'blocks' | 'continuous'
   const [showNumbers,setShowNumbers] = useState(true);
   const [numberStyle,setNumberStyle] = useState('inline'); // 'inline' | 'superscript'
   const [justifyText,setJustifyText] = useState(false);
   const [hoverHighlight,setHoverHighlight] = useState(true);
   const [autoHighlightInRead,setAutoHighlightInRead] = useState(false);
-  const [paraSpacing,setParaSpacing] = useState('normal'); // 'compact' | 'normal' | 'roomy'
   // Scroll position preservation for each mode
   const [readScrollY,setReadScrollY]=useState(0);
   const [searchScrollY,setSearchScrollY]=useState(0);
@@ -294,22 +295,33 @@ export default function BibleApp(){
         const s = JSON.parse(raw);
         if(typeof s.readerFontSize==='number') setReaderFontSize(clamp(s.readerFontSize, 8, 28));
         if(s.readerFontFamily==='serif' || s.readerFontFamily==='sans') setReaderFontFamily(s.readerFontFamily);
-        if(['normal','relaxed','loose'].includes(s.lineSpacing)) setLineSpacing(s.lineSpacing);
-        if(['narrow','normal','wide','full'].includes(s.readerWidth)) setReaderWidth(s.readerWidth);
+        // Migrate old string-based spacing to px, or use stored px value
+        if(typeof s.lineHeightPx==='number') setLineHeightPx(clamp(s.lineHeightPx, 12, 64));
+        else if(['normal','relaxed','loose'].includes(s.lineSpacing)){
+          const map = { normal: 28, relaxed: 32, loose: 36 };
+          setLineHeightPx(map[s.lineSpacing] ?? 28);
+        }
+        if(typeof s.readerWidthPct==='number') setReaderWidthPct(clamp(s.readerWidthPct, 20, 100));
+        else if(['narrow','normal','wide','full'].includes(s.readerWidth)){
+          // migrate old enum to percentage
+          const map = { narrow: 50, normal: 75, wide: 90, full: 100 };
+          setReaderWidthPct(map[s.readerWidth] ?? 80);
+          setReaderWidth(s.readerWidth);
+        }
         if(['blocks','continuous'].includes(s.verseLayout)) setVerseLayout(s.verseLayout);
         if(typeof s.showNumbers==='boolean') setShowNumbers(s.showNumbers);
         if(['inline','superscript'].includes(s.numberStyle)) setNumberStyle(s.numberStyle);
         if(typeof s.justifyText==='boolean') setJustifyText(s.justifyText);
         if(typeof s.hoverHighlight==='boolean') setHoverHighlight(s.hoverHighlight);
         if(typeof s.autoHighlightInRead==='boolean') setAutoHighlightInRead(s.autoHighlightInRead);
-        if(['compact','normal','roomy'].includes(s.paraSpacing)) setParaSpacing(s.paraSpacing);
+  // removed paraSpacing setting
       }
     } catch { /* ignore */ }
   },[]);
   useEffect(()=>{
-    const s = { readerFontSize, readerFontFamily, lineSpacing, readerWidth, verseLayout, showNumbers, numberStyle, justifyText, hoverHighlight, autoHighlightInRead, paraSpacing };
+    const s = { readerFontSize, readerFontFamily, lineHeightPx, readerWidthPct, verseLayout, showNumbers, numberStyle, justifyText, hoverHighlight, autoHighlightInRead };
     try { localStorage.setItem('br_reader_settings', JSON.stringify(s)); } catch {}
-  },[readerFontSize, readerFontFamily, lineSpacing, readerWidth, verseLayout, showNumbers, numberStyle, justifyText, hoverHighlight, autoHighlightInRead, paraSpacing]);
+  },[readerFontSize, readerFontFamily, lineHeightPx, readerWidthPct, verseLayout, showNumbers, numberStyle, justifyText, hoverHighlight, autoHighlightInRead]);
   // Auto-highlight search terms in Read mode if enabled
   useEffect(()=>{
     if(autoHighlightInRead && mode==='read'){
@@ -937,14 +949,9 @@ export default function BibleApp(){
             <button onClick={()=> setReaderFontFamily('sans')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', readerFontFamily==='sans'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Sans</button>
             <button onClick={()=> setReaderFontFamily('serif')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', readerFontFamily==='serif'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Serif</button>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-xs font-medium">
-            {[
-              {k:'normal',label:'Line: Normal'},
-              {k:'relaxed',label:'Line: Relaxed'},
-              {k:'loose',label:'Line: Loose'},
-            ].map(o=> (
-              <button key={o.k} onClick={()=> setLineSpacing(o.k)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', lineSpacing===o.k? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
-            ))}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">Line height: <span className="font-semibold">{lineHeightPx}px</span></label>
+            <input type="range" min={Math.max(readerFontSize,12)} max={64} step={1} value={lineHeightPx} onChange={e=> setLineHeightPx(clamp(parseInt(e.target.value)||28, Math.max(readerFontSize,12), 64))} className="w-full" />
           </div>
           <label className="inline-flex items-center gap-2 text-xs"><input type="checkbox" checked={justifyText} onChange={e=> setJustifyText(e.target.checked)} /> Justify text</label>
         </div>
@@ -957,26 +964,11 @@ export default function BibleApp(){
             <button onClick={()=> setVerseLayout('continuous')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', verseLayout==='continuous'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Continuous text</button>
           </div>
           <div className="grid grid-cols-4 gap-2 text-xs font-medium">
-            {[
-              {k:'narrow',label:'Width: Narrow'},
-              {k:'normal',label:'Width: Normal'},
-              {k:'wide',label:'Width: Wide'},
-              {k:'full',label:'Width: Full'},
-            ].map(o=> (
-              <button key={o.k} onClick={()=> setReaderWidth(o.k)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', readerWidth===o.k? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
-            ))}
-          </div>
-          {verseLayout==='blocks' && (
-            <div className="grid grid-cols-3 gap-2 text-xs font-medium">
-              {[
-                {k:'compact',label:'Spacing: Compact'},
-                {k:'normal',label:'Spacing: Normal'},
-                {k:'roomy',label:'Spacing: Roomy'},
-              ].map(o=> (
-                <button key={o.k} onClick={()=> setParaSpacing(o.k)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', paraSpacing===o.k? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
-              ))}
+            <div className="col-span-4 space-y-1">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">Reader width: <span className="font-semibold">{readerWidthPct}%</span></label>
+              <input type="range" min="20" max="100" step="1" value={readerWidthPct} onChange={e=> setReaderWidthPct(clamp(parseInt(e.target.value)||80,20,100))} className="w-full" />
             </div>
-          )}
+          </div>
         </div>
 
         {/* Verse numbers */}
@@ -1002,15 +994,15 @@ export default function BibleApp(){
             onClick={()=>{
               setReaderFontSize(18);
               setReaderFontFamily('sans');
-              setLineSpacing('relaxed');
+              setLineHeightPx(32);
               setReaderWidth('normal');
+              setReaderWidthPct(80);
               setVerseLayout('blocks');
               setShowNumbers(true);
               setNumberStyle('inline');
               setJustifyText(false);
               setHoverHighlight(true);
               setAutoHighlightInRead(false);
-              setParaSpacing('normal');
               try { localStorage.removeItem('br_reader_settings'); } catch {}
             }}
             className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -1038,17 +1030,27 @@ export default function BibleApp(){
             </div>
           </div>
           {/* Content container below header, rectangular edges */}
-          <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="bg-white dark:bg-slate-900 p-4 shadow-sm scroll-mt-[72px] transition-colors" style={{ maxWidth: (readerWidth==='narrow'? 640 : readerWidth==='normal'? 720 : readerWidth==='wide'? 900 : undefined), margin: (readerWidth==='full'? undefined : '0 auto') }}>
+          <motion.div
+            layout
+            initial={{opacity:0,y:8}}
+            animate={{opacity:1,y:0}}
+            transition={{duration:.25}}
+            className="bg-white dark:bg-slate-900 p-4 shadow-sm scroll-mt-[72px] transition-colors"
+            style={{
+              width: `${readerWidthPct}%`,
+              // When 100%, allow full-bleed width (no centering, no max clamp)
+              margin: readerWidthPct===100 ? '0' : '0 auto',
+              maxWidth: readerWidthPct===100 ? 'none' : 'min(1100px, 100%)'
+            }}
+          >
               <div
                 ref={versesContainerRef}
                 className={classNames(
                   readerFontFamily==='serif'? 'font-serif':'font-sans',
-                  lineSpacing==='normal'? 'leading-7': lineSpacing==='relaxed'? 'leading-8':'leading-9',
                   verseLayout==='continuous'? 'space-y-0':'',
-                  verseLayout==='blocks' && (paraSpacing==='compact'? 'space-y-2': paraSpacing==='roomy'? 'space-y-4':'space-y-3'),
                   justifyText? 'text-justify':''
                 )}
-                style={{ fontSize: readerFontSize? `${readerFontSize}px`: undefined }}
+                style={{ fontSize: readerFontSize? `${readerFontSize}px`: undefined, lineHeight: `${lineHeightPx}px` }}
               >
                 {readVerses.map(v=> {
                   const abbr = (bible?.[bookIdx]?.abbrev || bible?.[bookIdx]?.name || '').replaceAll(' ','_');
@@ -1065,7 +1067,9 @@ export default function BibleApp(){
                     key={v.n}
                     className={classNames(
                       verseLayout==='continuous'? 'inline':'block',
-                      'px-3 py-2',
+                      verseLayout==='continuous' ? 'px-0' : 'px-3',
+                      // Remove extra vertical padding so line-height fully controls spacing in both layouts
+                      'py-0',
                       hoverHighlight && verseLayout==='blocks' ? 'hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors':''
                     )}
                     style={{ scrollMarginTop: stickyReadHeight + 8 }}
@@ -1075,7 +1079,7 @@ export default function BibleApp(){
                       : <span className="mr-2 text-slate-400 select-none">{v.n}</span>
                     )}
                     <span>{(highlightInRead && searchObj)? highlightText(v.text, searchObj) : v.text}</span>
-                    {verseLayout==='continuous' && (justifyText ? '\u202F' : ' ')}
+                    {verseLayout==='continuous' && ' '}
                   </div>
                   );
                 })}
@@ -1085,7 +1089,21 @@ export default function BibleApp(){
     {/* Search Pane */}
   <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0, paddingBottom: bottomBarH }} className="pr-0 bg-white dark:bg-slate-900">
   {/* Statistics & Filters toggle (hidden by default) */}
-  <div className="sticky top-0 left-0 right-0 z-20 mb-0 w-full flex items-center justify-end bg-white/95 dark:bg-slate-900/95 backdrop-blur py-2 px-4 border-b border-slate-200 dark:border-slate-700" style={{ top: 0, left: 0, right: 0, transform: 'translateZ(0)', willChange: 'top' }}>
+  <div className="sticky top-0 left-0 right-0 z-20 mb-0 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur py-2 px-4 border-b border-slate-200 dark:border-slate-700" style={{ top: 0, left: 0, right: 0, transform: 'translateZ(0)', willChange: 'top' }}>
+        <div className="w-full flex items-center justify-between gap-3">
+          <div className="min-w-0 text-[13px] text-slate-600 dark:text-slate-400 truncate">
+            <span className="font-semibold text-slate-900 dark:text-slate-100">Search Results</span>{' '}
+            {query ? (
+              <>
+                for “{query}” {searchScope==='book' && currentBook ? <>in <span className="font-semibold">{currentBook.name}</span> </> : null}
+                — {(selectedBooks.length||selectedChapters.length) ? filteredMatchTotal : searchResults.totalMatches}
+                {searchResults.exceeded && ' (too many, limit exceeded)'} matches
+                {(selectedBooks.length||selectedChapters.length) ? <> · showing <span className="font-semibold">{filteredRows.length}</span></> : null}
+              </>
+            ) : (
+              <span className="text-slate-400">(enter search term)</span>
+            )}
+          </div>
           <button
             onClick={()=>{
               const next = !showStats;
@@ -1108,15 +1126,21 @@ export default function BibleApp(){
             {showStats? 'Hide' : 'Show'} Statistics & Filters
           </button>
         </div>
+        </div>
   {/* Statistics content moved to full-screen overlay above */}
-              <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="bg-white dark:bg-slate-900 p-5 scroll-mt-[72px] transition-colors">
-                <div className="text-sm text-slate-600 dark:text-slate-400">
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">Search Results</span>{' '}
-                  {query ? <>
-                    for “{query}” {searchScope==='book' && currentBook ? <>in <span className="font-semibold">{currentBook.name}</span> </>: null}— {(selectedBooks.length||selectedChapters.length)? filteredMatchTotal : searchResults.totalMatches}{searchResults.exceeded && ' (too many, limit exceeded)'} matches
-                    {(selectedBooks.length||selectedChapters.length) ? <> · showing <span className="font-semibold">{filteredRows.length}</span></>:null}
-                  </> : <span className="text-slate-400">(enter search term)</span>}
-                </div>
+              <motion.div
+                layout
+                initial={{opacity:0,y:8}}
+                animate={{opacity:1,y:0}}
+                transition={{duration:.25}}
+                className="bg-white dark:bg-slate-900 p-5 scroll-mt-[72px] transition-colors"
+                style={{
+                  width: `${readerWidthPct}%`,
+                  margin: readerWidthPct===100 ? '0' : '0 auto',
+                  maxWidth: readerWidthPct===100 ? 'none' : 'min(1100px, 100%)'
+                }}
+              >
+                {/* Summary moved to sticky header above */}
     <div className="mt-4 divide-y divide-slate-100 dark:divide-slate-700">
                   {query && !searchResults.exceeded && searchResults.rows.length===0 && <p className="text-slate-500 dark:text-slate-400 text-sm py-6">No matches.</p>}
                   {searchResults.exceeded && (
@@ -1137,7 +1161,15 @@ export default function BibleApp(){
                         <button className="underline decoration-dotted underline-offset-2" onClick={()=> jumpTo(r.book,r.chapter,r.verse)}>{r.book} {r.chapter}:{r.verse}</button>
                         <span className="ml-2 text-slate-400">· {r.count}×</span>
                       </div>
-                      <div className="leading-7">{highlightText(r.text,searchObj)}</div>
+                      <div
+                        className={classNames(
+                          readerFontFamily==='serif'? 'font-serif':'font-sans',
+                          justifyText ? 'text-justify' : ''
+                        )}
+                        style={{ fontSize: readerFontSize? `${readerFontSize}px`: undefined, lineHeight: `${lineHeightPx}px` }}
+                      >
+                        {highlightText(r.text,searchObj)}
+                      </div>
                     </div>
                   )}
                 </div>
