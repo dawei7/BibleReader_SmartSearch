@@ -839,7 +839,7 @@ export default function BibleApp(){
             </div>
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold tracking-tight truncate">About this app</div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Bible reading and smart search, thoughtfully crafted.</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Bible reading and smart search.</p>
             </div>
           </div>
           <button onClick={()=> setShowAbout(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Close</button>
