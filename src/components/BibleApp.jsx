@@ -697,7 +697,8 @@ export default function BibleApp(){
   )}
   {showStats && (
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
-      <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+      {/* Solid header to avoid any transparency overlap */}
+      <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Statistics & Filters</div>
           <div className="flex items-center gap-2">
@@ -708,13 +709,14 @@ export default function BibleApp(){
           </div>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-0 sm:px-4 py-3">
+  {/* Remove side padding so content is flush left/right */}
+  <div className="flex-1 overflow-y-auto px-0 sm:px-0 pt-0 pb-3">
         {searchResults?.exceeded ? (
           <div className="mx-4 sm:mx-0 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
             Too many matches to show statistics. Please refine your search.
           </div>
         ) : (
-          <div className="-mx-4 sm:mx-0">
+          <div className="-mx-0 sm:mx-0">
             {(()=>{
               const countsByChap = searchResults?.perChap || {};
               const allBooks = (topBooks||[]).map(b=> b.name);
@@ -728,10 +730,12 @@ export default function BibleApp(){
                 const dark  = `rgba(14, 165, 233, ${0.25 + t*0.65})`;
                 return theme==='dark'? dark : light;
               }
-              return (
-                  <div className="w-full rounded-none sm:rounded-2xl border-t sm:border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40">
-                    {/* Fancy top scrollbar (synced with the hidden bottom scroller) */}
-                    <div className="pt-3">
+              // Use a fixed, generous label column width so every row aligns perfectly
+              const labelAreaW = 148; // px – fits longest names at 12px, prevents wrapping
+        return (
+          <div className="w-full rounded-none bg-white dark:bg-slate-900">
+                    {/* Fancy top scrollbar (synced with the hidden bottom scroller) sticky, flush and opaque; add divider line */}
+                    <div className="sticky top-0 z-30 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                       <div ref={statsTopScrollRef} className="fancy-hscroll rounded-full" aria-label="Scroll chapters horizontally">
                         <div style={{ width: (maxChapters*(cellSize + 4)), height: 1 }} />
                       </div>
@@ -742,25 +746,28 @@ export default function BibleApp(){
                       {(topBooks||[]).map(({name:bookName})=>{
                         const book = (bible||[]).find(b=> b.name===bookName);
                         const chapters = book?.chapters?.length || 0;
-                        return (
-                          <div key={bookName} className="relative mb-2 last:mb-0">
-                            <button
-                              type="button"
-                              onClick={()=> toggleBook(bookName)}
-                              className={classNames(
-                                'absolute left-0 top-1/2 -translate-y-1/2 z-10 px-1 py-0.5 rounded text-[12px] font-semibold bg-transparent',
-                                selectedBooks.includes(bookName)
-                                  ? 'text-slate-900 dark:text-slate-100'
-                                  : 'text-slate-700 dark:text-slate-300'
-                              )}
-                              style={{
-                                textShadow: theme==='dark'
-                                  ? '0 1px 1px rgba(0,0,0,0.5)'
-                                  : '0 1px 1px rgba(255,255,255,0.9)'
-                              }}
-                              title={`Toggle book: ${bookName}`}
-                            >{bookName}</button>
-                            <div className="flex -mx-[2px]">
+                          return (
+                            <div
+                              key={bookName}
+                              className="relative mb-2 last:mb-0"
+                              style={{ display: 'grid', gridTemplateColumns: `${labelAreaW}px 1fr`, alignItems: 'center' }}
+                            >
+                              {/* Sticky left label area: solid bg, flush left, uniform width; grid col 1 */}
+                              <div className="sticky left-0 z-20 bg-white dark:bg-slate-900 flex items-center justify-center" style={{ width: labelAreaW, height: cellSize }}>
+                              <button
+                                type="button"
+                                onClick={()=> toggleBook(bookName)}
+                                className={classNames(
+            'w-full h-full inline-flex items-center justify-center rounded-md text-[12px] font-semibold transition-colors whitespace-nowrap overflow-hidden text-ellipsis px-2',
+                                  selectedBooks.includes(bookName)
+                                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 ring-1 ring-emerald-500'
+                                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+                                )}
+                                title={`Toggle book: ${bookName}`}
+                              >{bookName}</button>
+                            </div>
+                              {/* Heatmap buttons; grid col 2 always starts after fixed label col */}
+                              <div className="flex -mx-[2px]">
                               {Array.from({length: maxChapters}, (_,i)=> i+1).map(ch=>{
                                 const key = `${bookName} ${ch}`;
                                 const val = ch <= chapters ? (countsByChap[key]||0) : null;
@@ -778,8 +785,8 @@ export default function BibleApp(){
                                     title={ch<=chapters ? `${bookName} ${ch}: ${val||0}` : ''}
                                     style={{ width: cellSize, height: cellSize, background: colorFor(val||0) }}
                                   >
-                                    <span className="absolute inset-0 text-[10px] leading-[26px] text-slate-800 dark:text-slate-100 mix-blend-difference select-none">
-                                      {ch<=chapters && (val? '' : '')}
+                                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-slate-700/70 dark:text-slate-200/70 select-none">
+                                      {ch}
                                     </span>
                                   </button>
                                 );
