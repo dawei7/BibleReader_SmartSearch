@@ -1091,7 +1091,7 @@ export default function BibleApp(){
               <div className="text-sm text-slate-600 dark:text-slate-400 min-w-0">
                 <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">{activeVersionName}</span>
                 <span className="mx-2 text-slate-400">·</span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook?.name}</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook? bookAbbrev(currentBook.name, currentBook.abbrev): ''}</span>
                 {" "}Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})
               </div>
               <div className="flex items-center gap-2 text-xs">
@@ -1327,7 +1327,7 @@ export default function BibleApp(){
                               : <>
                                   ≈ <span className="font-semibold text-slate-700 dark:text-slate-200">{preflightEstimate.total.toLocaleString()}</span> matches
                                   {mSearchScope==='book' && bible?.[mBookIdx]
-                                    ? <> in <span className="font-semibold">{bible[mBookIdx].name}</span></>
+                                    ? <> in <span className="font-semibold">{bookAbbrev(bible[mBookIdx].name, bible[mBookIdx].abbrev)}</span></>
                                     : null}
                                 </>
                             )
@@ -1426,7 +1426,7 @@ export default function BibleApp(){
                   <div className="flex-1 overflow-y-auto px-4 py-4">
                     <div className="grid grid-cols-6 gap-2">
                       {(bible ?? []).map((b,i)=>{ const active=i===tempBookIdx; return (
-                        <button key={b.name+i} onClick={()=>{ setTempBookIdx(i); setTempChapterIdx(0); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border tracking-wide', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{b.name}</button>
+                        <button key={b.name+i} onClick={()=>{ setTempBookIdx(i); setTempChapterIdx(0); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border tracking-wide', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{bookAbbrev(b.name, b.abbrev)}</button>
                       ); })}
                     </div>
                   </div>
