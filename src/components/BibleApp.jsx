@@ -122,7 +122,7 @@ export default function BibleApp(){
   const [attemptLog,setAttemptLog]=useState([]);
   const [lastAttempt,setLastAttempt]=useState(null);
   const [lazyMode,setLazyMode]=useState(false);
-  const [theme,setTheme]=useState('light');
+  const [theme,setTheme]=useState('system');
   const [metaMap,setMetaMap]=useState({});
   const [showAbout,setShowAbout]=useState(false);
     const [highlightInRead,setHighlightInRead]=useState(false);
@@ -132,15 +132,15 @@ export default function BibleApp(){
   // (No visible settings sharing UI; persistence via localStorage happens automatically)
   // Settings overlay and reader preferences
   const [showSettings,setShowSettings] = useState(false);
-  const [readerFontSize,setReaderFontSize] = useState(18); // px
+  const [readerFontSize,setReaderFontSize] = useState(16); // px
   const [readerFontFamily,setReaderFontFamily] = useState('sans'); // 'sans' | 'serif'
   // Line height (px) slider replaces old lineSpacing options
   const [lineHeightPx,setLineHeightPx] = useState(28);
   const [readerWidth,setReaderWidth] = useState('normal'); // deprecated: kept for migration
-  const [readerWidthPct,setReaderWidthPct] = useState(80); // 20–100
+  const [readerWidthPct,setReaderWidthPct] = useState(100); // 20–100
   const [verseLayout,setVerseLayout] = useState('blocks'); // 'blocks' | 'continuous'
   const [showNumbers,setShowNumbers] = useState(true);
-  const [numberStyle,setNumberStyle] = useState('inline'); // 'inline' | 'superscript'
+  const [numberStyle,setNumberStyle] = useState('superscript'); // 'inline' | 'superscript'
   const [justifyText,setJustifyText] = useState(false);
   const [hoverHighlight,setHoverHighlight] = useState(true);
   const [autoHighlightInRead,setAutoHighlightInRead] = useState(false);
@@ -153,9 +153,24 @@ export default function BibleApp(){
   useEffect(()=>{
     try {
       const t = localStorage.getItem('br_theme');
-      if(t==='dark' || t==='light') setTheme(t);
+      if(t==='dark' || t==='light' || t==='system') setTheme(t);
+      else setTheme('system');
       const v = localStorage.getItem('br_version');
       if(v) storedVersionRef.current = v;
+    } catch { /* ignore */ }
+  },[]);
+  // Track system color scheme
+  const [systemPrefersDark, setSystemPrefersDark] = useState(()=>{
+    try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; }
+  });
+  useEffect(()=>{
+    try {
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      const onChange = (e)=> setSystemPrefersDark(!!e.matches);
+      // update now
+      setSystemPrefersDark(mql.matches);
+      if(mql.addEventListener) mql.addEventListener('change', onChange); else mql.addListener(onChange);
+      return ()=>{ if(mql.removeEventListener) mql.removeEventListener('change', onChange); else mql.removeListener(onChange); };
     } catch { /* ignore */ }
   },[]);
   const loadTokenRef=useRef(0); const bibleCacheRef=useRef({}); const bookCache=useRef({});
@@ -368,8 +383,13 @@ export default function BibleApp(){
     }
   },[autoHighlightInRead, mode, query]);
 
-  // Apply theme to root
-  useEffect(()=>{ const root=document.documentElement; if(theme==='dark') root.classList.add('dark'); else root.classList.remove('dark'); try { localStorage.setItem('br_theme', theme); } catch {} },[theme]);
+  // Apply theme to root (supports 'system')
+  useEffect(()=>{
+    const root=document.documentElement;
+    const isDark = theme==='dark' || (theme==='system' && systemPrefersDark);
+    if(isDark) root.classList.add('dark'); else root.classList.remove('dark');
+    try { localStorage.setItem('br_theme', theme); } catch {}
+  },[theme, systemPrefersDark]);
   // Close About overlay on Escape
   useEffect(()=>{ if(!showAbout) return; const onKey=(e)=>{ if(e.key==='Escape') setShowAbout(false); }; window.addEventListener('keydown',onKey); return ()=> window.removeEventListener('keydown',onKey); },[showAbout]);
   const currentBook = bible?.[bookIdx]; const chapterCount=currentBook?.chapters.length || 0; const verseCount=currentBook?.chapters[chapterIdx]?.length || 0; const vEndEffective = vEnd===0? verseCount : clamp(vEnd,1,verseCount); const vStartEffective = clamp(vStart,1,vEndEffective); const searchObj = useMemo(()=> buildSearchRegex(query,searchMode,{caseSensitive}),[query,searchMode,caseSensitive]);
@@ -794,12 +814,12 @@ export default function BibleApp(){
             </button>
             {/* Mobile controls toggle now in bottom tab bar */}
             <button
-              onClick={()=> setTheme(th=> th==='dark'?'light':'dark')}
+              onClick={()=> setTheme(th=> th==='dark' ? 'light' : th==='light' ? 'dark' : (systemPrefersDark? 'light':'dark'))}
               aria-label="Toggle dark mode"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
             >
-              <span className="hidden sm:inline">{theme==='dark'? 'Light':'Dark'} mode</span>
-              <span>{theme==='dark'? '☀️':'🌙'}</span>
+              <span className="hidden sm:inline">{(theme==='dark'||(theme==='system'&&systemPrefersDark))? 'Light':'Dark'} mode</span>
+              <span>{(theme==='dark'||(theme==='system'&&systemPrefersDark))? '☀️':'🌙'}</span>
             </button>
           </div>
         </div>
@@ -1029,7 +1049,11 @@ export default function BibleApp(){
           <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Behavior</div>
           <label className="block text-xs"><input type="checkbox" className="mr-2" checked={hoverHighlight} onChange={e=> setHoverHighlight(e.target.checked)} /> Highlight verse on hover (blocks)</label>
           <label className="block text-xs"><input type="checkbox" className="mr-2" checked={autoHighlightInRead} onChange={e=> setAutoHighlightInRead(e.target.checked)} /> Always highlight search terms in Read mode</label>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400">Theme: <button onClick={()=> setTheme('light')} className={classNames('ml-2 px-2 py-1 rounded border text-xs', theme==='light'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Light</button><button onClick={()=> setTheme('dark')} className={classNames('ml-2 px-2 py-1 rounded border text-xs', theme==='dark'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Dark</button></div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400">Theme:
+            <button onClick={()=> setTheme('system')} className={classNames('ml-2 px-2 py-1 rounded border text-xs', theme==='system'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>System</button>
+            <button onClick={()=> setTheme('light')} className={classNames('ml-2 px-2 py-1 rounded border text-xs', theme==='light'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Light</button>
+            <button onClick={()=> setTheme('dark')} className={classNames('ml-2 px-2 py-1 rounded border text-xs', theme==='dark'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Dark</button>
+          </div>
         </div>
 
   {/* (No visible sharing UI) */}
@@ -1037,14 +1061,14 @@ export default function BibleApp(){
         <div>
           <button
             onClick={()=>{
-              setReaderFontSize(18);
+              setReaderFontSize(16);
               setReaderFontFamily('sans');
               setLineHeightPx(32);
               setReaderWidth('normal');
-              setReaderWidthPct(80);
+              setReaderWidthPct(100);
               setVerseLayout('blocks');
               setShowNumbers(true);
-              setNumberStyle('inline');
+              setNumberStyle('superscript');
               setJustifyText(false);
               setHoverHighlight(true);
               setAutoHighlightInRead(false);
