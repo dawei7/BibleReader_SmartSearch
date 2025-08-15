@@ -903,7 +903,7 @@ export default function BibleApp(){
     {/* Search Pane */}
   <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0, paddingBottom: bottomBarH }} className="pr-0 bg-white dark:bg-slate-900">
   {/* Statistics & Filters toggle (hidden by default) */}
-  <div className="sticky top-0 left-0 right-0 z-20 mb-0 w-full flex items-center justify-end bg-white/90 dark:bg-slate-900/90 backdrop-blur pt-0 pb-2 px-3 sm:px-4 border-b border-slate-200 dark:border-slate-700" style={{ top: 0, left: 0, right: 0, transform: 'translateZ(0)', willChange: 'top' }}>
+  <div className="sticky top-0 left-0 right-0 z-20 mb-0 w-full flex items-center justify-end bg-white/95 dark:bg-slate-900/95 backdrop-blur py-2 px-4 border-b border-slate-200 dark:border-slate-700" style={{ top: 0, left: 0, right: 0, transform: 'translateZ(0)', willChange: 'top' }}>
           <button
             onClick={()=>{
               const next = !showStats;
@@ -984,7 +984,7 @@ export default function BibleApp(){
   >
           <div className="w-full h-full bg-white dark:bg-slate-900 pb-[calc(env(safe-area-inset-bottom,0px))] flex flex-col">
             <div className="flex flex-col h-full overflow-hidden">
-              <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+              <div className="sticky top-0 z-10 px-4 py-2 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">{mode==='read'? 'Reading Controls':'Search Controls'}</div>
                   <button className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" onClick={()=> setShowControls(false)}>Close</button>
