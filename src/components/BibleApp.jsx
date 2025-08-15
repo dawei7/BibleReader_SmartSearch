@@ -628,6 +628,10 @@ export default function BibleApp(){
     return Array.from(map.entries()).sort((a,b)=> a[0].localeCompare(b[0]));
   },[versions]);
   const currentVersionObj = useMemo(()=> versions.find(v=> v.abbreviation === (mVersion||version)) || null,[versions,mVersion,version]);
+  const activeVersionName = useMemo(()=>{
+    const v = versions.find(v=> v.abbreviation===version);
+    return v ? v.name : version;
+  },[versions,version]);
   function openVersionPicker(){ setTempVersion(mVersion||version); setShowVersionPicker(true); }
   function applyVersionPicker(){ if(tempVersion) setMVersion(tempVersion); setShowVersionPicker(false); }
   function openBookPicker(){
@@ -1019,7 +1023,9 @@ export default function BibleApp(){
           {/* Sticky chapter header stays fixed at the top of the scrollable pane */}
           <div ref={readStickyRef} className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700">
             <div className="px-4 py-2 flex items-center justify-between gap-2">
-              <div className="text-sm text-slate-600 dark:text-slate-400">
+              <div className="text-sm text-slate-600 dark:text-slate-400 min-w-0">
+                <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">{activeVersionName}</span>
+                <span className="mx-2 text-slate-400">·</span>
                 <span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook?.name}</span>
                 {" "}Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})
               </div>
