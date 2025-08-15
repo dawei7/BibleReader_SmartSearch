@@ -460,6 +460,51 @@ export default function BibleApp(){
     }
     return searchResults.totalMatches || 0;
   },[searchResults, selectedBooks, selectedChapters]);
+
+  // Staged (controls overlay) estimate: approximate results before applying
+  const stagedSearchObj = useMemo(
+    () => buildSearchRegex(mQuery || '', mSearchMode, { caseSensitive: mCaseSensitive }),
+    [mQuery, mSearchMode, mCaseSensitive]
+  );
+  const preflightEstimate = useMemo(() => {
+    const q = (mQuery || '').trim();
+    if (!bible || !q || !stagedSearchObj) return { total: 0, verses: 0, exceeded: false };
+    let total = 0;
+    let verses = 0;
+    let exceeded = false;
+    const scanBook = (b) => {
+      let cStart = 0;
+      let cEnd = b.chapters.length - 1;
+      if (mSearchScope === 'book') {
+        const totalCh = b.chapters.length;
+        const startClamped = Math.max(1, Math.min(mChapFrom || 1, totalCh));
+        const endRaw = (mChapTo === 0) ? totalCh : Math.max(1, Math.min(mChapTo, totalCh));
+        const endClamped = Math.max(startClamped, endRaw);
+        cStart = startClamped - 1;
+        cEnd = endClamped - 1;
+      }
+      for (let cIdx = cStart; cIdx <= cEnd; cIdx++) {
+        const ch = b.chapters[cIdx];
+        for (let vi = 0; vi < ch.length; vi++) {
+          const v = ch[vi];
+          const { count, matched } = countMatches(v, stagedSearchObj);
+          if (matched) {
+            verses++;
+            total += count;
+            if (verses > MAX_SEARCH_RESULTS) { exceeded = true; return true; }
+          }
+        }
+      }
+      return false;
+    };
+    if (mSearchScope === 'book') {
+      const b = bible[mBookIdx];
+      if (b && scanBook(b)) return { total, verses, exceeded: true };
+    } else {
+      for (const b of bible) { if (scanBook(b)) return { total, verses, exceeded: true }; }
+    }
+    return { total, verses, exceeded };
+  }, [bible, stagedSearchObj, mSearchScope, mBookIdx, mChapFrom, mChapTo, mQuery]);
   function toggleBook(name){ setSelectedChapters([]); setSelectedBooks(bs=> bs.includes(name)? bs.filter(b=>b!==name): [...bs,name]); }
   function toggleChapter(chName){ setSelectedChapters(cs=> cs.includes(chName)? cs.filter(c=>c!==chName): [...cs,chName]); }
   function resetSelections(){ setSelectedBooks([]); setSelectedChapters([]); }
@@ -698,11 +743,25 @@ export default function BibleApp(){
   {showStats && (
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
       {/* Solid header to avoid any transparency overlap */}
-      <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Statistics & Filters</div>
+      <div className="sticky top-0 z-40 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Statistics & Filters</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              Tap book to filter · tap chapters to refine
+              <span className="ml-2 text-slate-400">·</span>
+              <span className="ml-2">
+                {searchResults?.exceeded
+                  ? 'Too many matches'
+                  : <>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">{((selectedBooks.length || selectedChapters.length) ? filteredMatchTotal : (searchResults?.totalMatches || 0)).toLocaleString()}</span>
+                      <span className="ml-1">matches</span>
+                    </>}
+              </span>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            {(selectedBooks.length||selectedChapters.length) && (
+            {Boolean(selectedBooks.length || selectedChapters.length) && (
               <button className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" onClick={resetSelections}>Clear</button>
             )}
             <button onClick={()=> setShowStats(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Close</button>
@@ -797,8 +856,7 @@ export default function BibleApp(){
                       })}
                     </div>
                   </div>
-                  </div>
-                  <div className="px-4 pb-3 text-[11px] text-slate-500 dark:text-slate-400">Tap a book label to filter by book, or tap chapter cells to filter by chapters. This single graph shows distribution across all chapters for each book.</div>
+                   </div>
                 </div>
               );
             })()}
@@ -976,6 +1034,21 @@ export default function BibleApp(){
                         <input value={mQuery} onChange={e=>{ if(selectedBooks.length||selectedChapters.length){ setSelectedBooks([]); setSelectedChapters([]);} setMQuery(e.target.value); }} className="flex-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm" placeholder="e.g. light" />
                         <button className="rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 transition-colors" onClick={applySearch}>Apply</button>
                       </div>
+                      <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        {mQuery.trim()
+                          ? (
+                            preflightEstimate.exceeded
+                              ? <span className="text-amber-700 dark:text-amber-400">Too many matches (&gt;{MAX_SEARCH_RESULTS.toLocaleString()} verses)</span>
+                              : <>
+                                  ≈ <span className="font-semibold text-slate-700 dark:text-slate-200">{preflightEstimate.total.toLocaleString()}</span> matches
+                                  {mSearchScope==='book' && bible?.[mBookIdx]
+                                    ? <> in <span className="font-semibold">{bible[mBookIdx].name}</span></>
+                                    : null}
+                                </>
+                            )
+                          : <span className="opacity-70">Type to preview</span>
+                        }
+                      </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs font-medium">
                       {[{key:'all',label:'All words'},{key:'any',label:'Any'},{key:'phrase',label:'Phrase'}].map(o=> (
@@ -1010,7 +1083,7 @@ export default function BibleApp(){
                     )}
                     <div className="flex items-center justify-between gap-4 text-xs">
                       <label className="inline-flex items-center gap-1"><input type="checkbox" checked={mCaseSensitive} onChange={e=>setMCaseSensitive(e.target.checked)} /> Case sensitive</label>
-                      {(selectedBooks.length||selectedChapters.length) && (
+                      {Boolean(selectedBooks.length || selectedChapters.length) && (
                         <button className="text-blue-600 dark:text-blue-400 underline decoration-dotted underline-offset-2" onClick={resetSelections}>Clear selection</button>
                       )}
                     </div>
