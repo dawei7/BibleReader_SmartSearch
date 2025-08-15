@@ -1071,11 +1071,11 @@ export default function BibleApp(){
                     style={{ scrollMarginTop: stickyReadHeight + 8 }}
                   >
                     {showNumbers && (numberStyle==='superscript'
-                      ? <sup className="mr-1 text-slate-400 select-none">{v.n}</sup>
+                      ? <sup className={classNames(justifyText? 'mr-0.5':'mr-1', 'text-slate-400 select-none')}>{v.n}</sup>
                       : <span className="mr-2 text-slate-400 select-none">{v.n}</span>
                     )}
                     <span>{(highlightInRead && searchObj)? highlightText(v.text, searchObj) : v.text}</span>
-                    {verseLayout==='continuous' && ' '}
+                    {verseLayout==='continuous' && (justifyText ? '\u202F' : ' ')}
                   </div>
                   );
                 })}
