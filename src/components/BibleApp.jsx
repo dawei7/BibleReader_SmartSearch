@@ -128,6 +128,19 @@ export default function BibleApp(){
     const [highlightInRead,setHighlightInRead]=useState(false);
     const [pendingScrollVerse,setPendingScrollVerse]=useState(null);
   const [stickyReadHeight,setStickyReadHeight]=useState(0);
+  // Settings overlay and reader preferences
+  const [showSettings,setShowSettings] = useState(false);
+  const [readerFontSize,setReaderFontSize] = useState(18); // px
+  const [readerFontFamily,setReaderFontFamily] = useState('sans'); // 'sans' | 'serif'
+  const [lineSpacing,setLineSpacing] = useState('relaxed'); // 'normal' | 'relaxed' | 'loose'
+  const [readerWidth,setReaderWidth] = useState('normal'); // 'narrow' | 'normal' | 'wide' | 'full'
+  const [verseLayout,setVerseLayout] = useState('blocks'); // 'blocks' | 'continuous'
+  const [showNumbers,setShowNumbers] = useState(true);
+  const [numberStyle,setNumberStyle] = useState('inline'); // 'inline' | 'superscript'
+  const [justifyText,setJustifyText] = useState(false);
+  const [hoverHighlight,setHoverHighlight] = useState(true);
+  const [autoHighlightInRead,setAutoHighlightInRead] = useState(false);
+  const [paraSpacing,setParaSpacing] = useState('normal'); // 'compact' | 'normal' | 'roomy'
   // Scroll position preservation for each mode
   const [readScrollY,setReadScrollY]=useState(0);
   const [searchScrollY,setSearchScrollY]=useState(0);
@@ -272,6 +285,37 @@ export default function BibleApp(){
       if(!cancelled){ setBible(SAMPLE_BIBLE); setVersion('sample'); }
     }
   })(); return ()=>{ cancelled=true; }; },[]);
+
+  // Load and persist reader settings
+  useEffect(()=>{
+    try {
+      const raw = localStorage.getItem('br_reader_settings');
+      if(raw){
+        const s = JSON.parse(raw);
+        if(typeof s.readerFontSize==='number') setReaderFontSize(clamp(s.readerFontSize, 8, 28));
+        if(s.readerFontFamily==='serif' || s.readerFontFamily==='sans') setReaderFontFamily(s.readerFontFamily);
+        if(['normal','relaxed','loose'].includes(s.lineSpacing)) setLineSpacing(s.lineSpacing);
+        if(['narrow','normal','wide','full'].includes(s.readerWidth)) setReaderWidth(s.readerWidth);
+        if(['blocks','continuous'].includes(s.verseLayout)) setVerseLayout(s.verseLayout);
+        if(typeof s.showNumbers==='boolean') setShowNumbers(s.showNumbers);
+        if(['inline','superscript'].includes(s.numberStyle)) setNumberStyle(s.numberStyle);
+        if(typeof s.justifyText==='boolean') setJustifyText(s.justifyText);
+        if(typeof s.hoverHighlight==='boolean') setHoverHighlight(s.hoverHighlight);
+        if(typeof s.autoHighlightInRead==='boolean') setAutoHighlightInRead(s.autoHighlightInRead);
+        if(['compact','normal','roomy'].includes(s.paraSpacing)) setParaSpacing(s.paraSpacing);
+      }
+    } catch { /* ignore */ }
+  },[]);
+  useEffect(()=>{
+    const s = { readerFontSize, readerFontFamily, lineSpacing, readerWidth, verseLayout, showNumbers, numberStyle, justifyText, hoverHighlight, autoHighlightInRead, paraSpacing };
+    try { localStorage.setItem('br_reader_settings', JSON.stringify(s)); } catch {}
+  },[readerFontSize, readerFontFamily, lineSpacing, readerWidth, verseLayout, showNumbers, numberStyle, justifyText, hoverHighlight, autoHighlightInRead, paraSpacing]);
+  // Auto-highlight search terms in Read mode if enabled
+  useEffect(()=>{
+    if(autoHighlightInRead && mode==='read'){
+      setHighlightInRead(!!query);
+    }
+  },[autoHighlightInRead, mode, query]);
 
   // Apply theme to root
   useEffect(()=>{ const root=document.documentElement; if(theme==='dark') root.classList.add('dark'); else root.classList.remove('dark'); try { localStorage.setItem('br_theme', theme); } catch {} },[theme]);
@@ -685,6 +729,14 @@ export default function BibleApp(){
                 >{t==='read'? 'Read':'Search'}</button>
               ))}
             </nav>
+            <button
+              onClick={()=> setShowSettings(true)}
+              aria-label="Settings"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
+            >
+              <span className="hidden sm:inline">Settings</span>
+              <span>⚙️</span>
+            </button>
             {/* Mobile controls toggle now in bottom tab bar */}
             <button
               onClick={()=> setTheme(th=> th==='dark'?'light':'dark')}
@@ -865,6 +917,108 @@ export default function BibleApp(){
       </div>
     </div>
   )}
+  {showSettings && (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+      <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Settings</div>
+          <button onClick={()=> setShowSettings(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Apply</button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+        {/* Typography */}
+        <div className="space-y-3">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Typography</div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Font size: <span className="font-semibold text-slate-800 dark:text-slate-200">{readerFontSize}px</span></label>
+            <input type="range" min="8" max="28" step="1" value={readerFontSize} onChange={e=> setReaderFontSize(parseInt(e.target.value)||18)} className="w-full" />
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs font-medium">
+            <button onClick={()=> setReaderFontFamily('sans')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', readerFontFamily==='sans'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Sans</button>
+            <button onClick={()=> setReaderFontFamily('serif')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', readerFontFamily==='serif'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Serif</button>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+            {[
+              {k:'normal',label:'Line: Normal'},
+              {k:'relaxed',label:'Line: Relaxed'},
+              {k:'loose',label:'Line: Loose'},
+            ].map(o=> (
+              <button key={o.k} onClick={()=> setLineSpacing(o.k)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', lineSpacing===o.k? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
+            ))}
+          </div>
+          <label className="inline-flex items-center gap-2 text-xs"><input type="checkbox" checked={justifyText} onChange={e=> setJustifyText(e.target.checked)} /> Justify text</label>
+        </div>
+
+        {/* Layout */}
+        <div className="space-y-3">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Layout</div>
+          <div className="grid grid-cols-2 gap-2 text-xs font-medium">
+            <button onClick={()=> setVerseLayout('blocks')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', verseLayout==='blocks'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Verses as blocks</button>
+            <button onClick={()=> setVerseLayout('continuous')} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', verseLayout==='continuous'? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Continuous text</button>
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-xs font-medium">
+            {[
+              {k:'narrow',label:'Width: Narrow'},
+              {k:'normal',label:'Width: Normal'},
+              {k:'wide',label:'Width: Wide'},
+              {k:'full',label:'Width: Full'},
+            ].map(o=> (
+              <button key={o.k} onClick={()=> setReaderWidth(o.k)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', readerWidth===o.k? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
+            ))}
+          </div>
+          {verseLayout==='blocks' && (
+            <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+              {[
+                {k:'compact',label:'Spacing: Compact'},
+                {k:'normal',label:'Spacing: Normal'},
+                {k:'roomy',label:'Spacing: Roomy'},
+              ].map(o=> (
+                <button key={o.k} onClick={()=> setParaSpacing(o.k)} className={classNames('px-2.5 py-2 rounded-lg border transition-colors', paraSpacing===o.k? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{o.label}</button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Verse numbers */}
+        <div className="space-y-3">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Verse Numbers</div>
+          <label className="inline-flex items-center gap-2 text-xs"><input type="checkbox" checked={showNumbers} onChange={e=> setShowNumbers(e.target.checked)} /> Show verse numbers</label>
+          <div className="grid grid-cols-2 gap-2 text-xs font-medium">
+            <button onClick={()=> setNumberStyle('inline')} disabled={!showNumbers} className={classNames('px-2.5 py-2 rounded-lg border transition-colors disabled:opacity-50', numberStyle==='inline' && showNumbers? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Inline</button>
+            <button onClick={()=> setNumberStyle('superscript')} disabled={!showNumbers} className={classNames('px-2.5 py-2 rounded-lg border transition-colors disabled:opacity-50', numberStyle==='superscript' && showNumbers? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Superscript</button>
+          </div>
+        </div>
+
+        {/* Behavior */}
+        <div className="space-y-3">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Behavior</div>
+          <label className="block text-xs"><input type="checkbox" className="mr-2" checked={hoverHighlight} onChange={e=> setHoverHighlight(e.target.checked)} /> Highlight verse on hover (blocks)</label>
+          <label className="block text-xs"><input type="checkbox" className="mr-2" checked={autoHighlightInRead} onChange={e=> setAutoHighlightInRead(e.target.checked)} /> Always highlight search terms in Read mode</label>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400">Theme: <button onClick={()=> setTheme('light')} className={classNames('ml-2 px-2 py-1 rounded border text-xs', theme==='light'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Light</button><button onClick={()=> setTheme('dark')} className={classNames('ml-2 px-2 py-1 rounded border text-xs', theme==='dark'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Dark</button></div>
+        </div>
+
+        <div>
+          <button
+            onClick={()=>{
+              setReaderFontSize(18);
+              setReaderFontFamily('sans');
+              setLineSpacing('relaxed');
+              setReaderWidth('normal');
+              setVerseLayout('blocks');
+              setShowNumbers(true);
+              setNumberStyle('inline');
+              setJustifyText(false);
+              setHoverHighlight(true);
+              setAutoHighlightInRead(false);
+              setParaSpacing('normal');
+              try { localStorage.removeItem('br_reader_settings'); } catch {}
+            }}
+            className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800"
+          >Reset to defaults</button>
+        </div>
+      </div>
+    </div>
+  )}
   {/* (Desktop sidebar code removed) */}
 
   <section className="space-y-0 mt-0 pt-[0px]">
@@ -884,16 +1038,44 @@ export default function BibleApp(){
             </div>
           </div>
           {/* Content container below header, rectangular edges */}
-          <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="bg-white dark:bg-slate-900 p-4 shadow-sm scroll-mt-[72px] transition-colors">
-              <div ref={versesContainerRef} className="space-y-3 leading-8">
+          <motion.div layout initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="bg-white dark:bg-slate-900 p-4 shadow-sm scroll-mt-[72px] transition-colors" style={{ maxWidth: (readerWidth==='narrow'? 640 : readerWidth==='normal'? 720 : readerWidth==='wide'? 900 : undefined), margin: (readerWidth==='full'? undefined : '0 auto') }}>
+              <div
+                ref={versesContainerRef}
+                className={classNames(
+                  readerFontFamily==='serif'? 'font-serif':'font-sans',
+                  lineSpacing==='normal'? 'leading-7': lineSpacing==='relaxed'? 'leading-8':'leading-9',
+                  verseLayout==='continuous'? 'space-y-0':'',
+                  verseLayout==='blocks' && (paraSpacing==='compact'? 'space-y-2': paraSpacing==='roomy'? 'space-y-4':'space-y-3'),
+                  justifyText? 'text-justify':''
+                )}
+                style={{ fontSize: readerFontSize? `${readerFontSize}px`: undefined }}
+              >
                 {readVerses.map(v=> {
                   const abbr = (bible?.[bookIdx]?.abbrev || bible?.[bookIdx]?.name || '').replaceAll(' ','_');
                   const osis = `${abbr}.${chapterIdx+1}.${v.n}`;
                   return (
                   // Unique id per verse (OSIS-like): v-<abbr>.<chapter>.<verse>
-                  <div id={`v-${osis}`} data-osis={osis} data-verse={v.n} data-bookidx={bookIdx} data-chapter={chapterIdx+1} data-verseidx={v.n} key={v.n} className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ scrollMarginTop: stickyReadHeight + 8 }}>
-                    <span className="mr-2 select-none text-slate-400">{v.n}</span>
+                  <div
+                    id={`v-${osis}`}
+                    data-osis={osis}
+                    data-verse={v.n}
+                    data-bookidx={bookIdx}
+                    data-chapter={chapterIdx+1}
+                    data-verseidx={v.n}
+                    key={v.n}
+                    className={classNames(
+                      verseLayout==='continuous'? 'inline':'block',
+                      'px-3 py-2',
+                      hoverHighlight && verseLayout==='blocks' ? 'hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors':''
+                    )}
+                    style={{ scrollMarginTop: stickyReadHeight + 8 }}
+                  >
+                    {showNumbers && (numberStyle==='superscript'
+                      ? <sup className="mr-1 text-slate-400 select-none">{v.n}</sup>
+                      : <span className="mr-2 text-slate-400 select-none">{v.n}</span>
+                    )}
                     <span>{(highlightInRead && searchObj)? highlightText(v.text, searchObj) : v.text}</span>
+                    {verseLayout==='continuous' && ' '}
                   </div>
                   );
                 })}
