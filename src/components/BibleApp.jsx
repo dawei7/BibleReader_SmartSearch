@@ -1013,16 +1013,6 @@ export default function BibleApp(){
             </button>
           </div>
           <div className="flex items-center gap-3">
-            {mode==='read' && (
-              <button
-                onClick={saveCurrentPosition}
-                aria-label="Save current position"
-                title="Save current position"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
-              >
-                <Icon.Save className="h-4 w-4"/>
-              </button>
-            )}
             <nav className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
         {['read','search'].map(t => (
                 <button
@@ -1057,6 +1047,16 @@ export default function BibleApp(){
               >
                 <span className="hidden sm:inline">Install</span>
                 <Icon.Install className="h-4 w-4"/>
+              </button>
+            )}
+            {mode==='read' && (
+              <button
+                onClick={saveCurrentPosition}
+                aria-label="Save current position"
+                title="Save current position"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
+              >
+                <Icon.Save className="h-4 w-4"/>
               </button>
             )}
             <button
