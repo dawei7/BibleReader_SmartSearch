@@ -461,11 +461,13 @@ export default function BibleApp(){
   },[theme, systemPrefersDark]);
   // Capture beforeinstallprompt to show Install button
   useEffect(()=>{
-    function onBIP(e){ e.preventDefault(); setDeferredPrompt(e); setCanInstall(true); }
-    window.addEventListener('beforeinstallprompt', onBIP);
-    function onInstalled(){ setCanInstall(false); setDeferredPrompt(null); }
-    window.addEventListener('appinstalled', onInstalled);
-    return ()=>{ window.removeEventListener('beforeinstallprompt', onBIP); window.removeEventListener('appinstalled', onInstalled); };
+  function onBIP(e){ e.preventDefault(); setDeferredPrompt(e); setCanInstall(true); }
+  window.addEventListener('beforeinstallprompt', onBIP);
+  function onInstalled(){ setCanInstall(false); setDeferredPrompt(null); }
+  window.addEventListener('appinstalled', onInstalled);
+  // Safety: if browser never fires BIP (e.g., iOS Safari), ensure flag is false
+  const t = setTimeout(()=>{ if(!deferredPrompt) setCanInstall(false); }, 4000);
+  return ()=>{ clearTimeout(t); window.removeEventListener('beforeinstallprompt', onBIP); window.removeEventListener('appinstalled', onInstalled); };
   },[]);
   async function onInstall(){
     try {

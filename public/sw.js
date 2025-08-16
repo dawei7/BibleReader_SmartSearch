@@ -1,9 +1,14 @@
 // Simple service worker for offline-first caching of app shell and Bible assets
 const CACHE = 'brss-cache-v1';
+// Derive base path from SW scope (works on GitHub Pages subpaths)
+const BASE = (() => {
+  try { return new URL(self.registration.scope).pathname; } catch { return '/'; }
+})();
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/favicon.svg'
+  `${BASE}`,
+  `${BASE}index.html`,
+  `${BASE}favicon.svg`,
+  `${BASE}manifest.webmanifest`
 ];
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -24,8 +29,10 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   // Only handle same-origin
   if (url.origin !== location.origin) return;
+  // Only handle requests within our scope/base path
+  if (!url.pathname.startsWith(BASE)) return;
   // Network-first for bibles JSON to keep fresh; cache-first for app shell
-  if (/\/bibles\//.test(url.pathname)) {
+  if (new RegExp(`^${BASE.replace(/[.*+?^${}()|[\\]\\]/g, r => r === '/' ? '\\/' : `\\${r}`)}bibles\/`).test(url.pathname)) {
     event.respondWith((async () => {
       try {
         const res = await fetch(req);
