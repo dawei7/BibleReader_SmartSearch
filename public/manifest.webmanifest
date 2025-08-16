@@ -1,7 +1,9 @@
 {
   "name": "Bible Reader · Smart Search",
   "short_name": "BibleReader",
-  "start_url": ".",
+  "id": "/BibleReader_SmartSearch/",
+  "scope": "/BibleReader_SmartSearch/",
+  "start_url": "/BibleReader_SmartSearch/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",

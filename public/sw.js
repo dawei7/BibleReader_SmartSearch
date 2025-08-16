@@ -24,6 +24,9 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
   })());
 });
+// Escape helper for building regex from BASE
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
@@ -32,7 +35,8 @@ self.addEventListener('fetch', (event) => {
   // Only handle requests within our scope/base path
   if (!url.pathname.startsWith(BASE)) return;
   // Network-first for bibles JSON to keep fresh; cache-first for app shell
-  if (new RegExp(`^${BASE.replace(/[.*+?^${}()|[\\]\\]/g, r => r === '/' ? '\\/' : `\\${r}`)}bibles\/`).test(url.pathname)) {
+  const biblesPathRe = new RegExp(`^${escapeRe(BASE)}bibles/`);
+  if (biblesPathRe.test(url.pathname)) {
     event.respondWith((async () => {
       try {
         const res = await fetch(req);
