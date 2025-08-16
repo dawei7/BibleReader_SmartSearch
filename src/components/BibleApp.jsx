@@ -1,4 +1,50 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+// Tiny inline SVG icons (stroke-based, inherit currentColor)
+const Icon = {
+  Read: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 18c-1.2-1-2.6-1.5-4.5-1.5H5a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12z"/>
+      <path d="M12 18c1.2-1 2.6-1.5 4.5-1.5H19a3 3 0 0 0 3-3V6a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2v12z"/>
+    </svg>
+  ),
+  Search: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="11" cy="11" r="6"/>
+      <path d="M20 20l-3.5-3.5"/>
+    </svg>
+  ),
+  Install: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 3v10"/>
+      <path d="M8.5 9.5L12 13l3.5-3.5"/>
+      <path d="M5 21h14"/>
+    </svg>
+  ),
+  Save: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M5 4h10l4 4v12H5z"/>
+      <path d="M9 4v6h6"/>
+      <rect x="8" y="14" width="8" height="6" rx="1"/>
+    </svg>
+  ),
+  Settings: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>
+    </svg>
+  ),
+  Sun: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>
+    </svg>
+  ),
+  Moon: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M20 15.5A8.5 8.5 0 1 1 8.5 4 6.5 6.5 0 0 0 20 15.5z"/>
+    </svg>
+  ),
+};
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, Cell } from 'recharts';
 
@@ -961,7 +1007,7 @@ export default function BibleApp(){
           </div>
           <div className="flex items-center gap-3">
             <nav className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-              {['read','search'].map(t => (
+        {['read','search'].map(t => (
                 <button
                   key={t}
                   aria-label={t==='read' ? 'Read' : 'Search'}
@@ -981,7 +1027,7 @@ export default function BibleApp(){
                     setMode(t);
                   }}
                 >
-                  <span aria-hidden>{t==='read' ? '📖' : '🔎'}</span>
+          {t==='read' ? <Icon.Read className="h-4 w-4"/> : <Icon.Search className="h-4 w-4"/>}
                   <span className="hidden sm:inline ml-1">{t==='read' ? 'Read' : 'Search'}</span>
                 </button>
               ))}
@@ -994,7 +1040,7 @@ export default function BibleApp(){
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
               >
                 <span className="hidden sm:inline">Install</span>
-                <span>⬇️</span>
+                <Icon.Install className="h-4 w-4"/>
               </button>
             )}
             {mode==='read' && (
@@ -1005,7 +1051,7 @@ export default function BibleApp(){
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
               >
                 <span className="hidden sm:inline">Save</span>
-                <span>💾</span>
+                <Icon.Save className="h-4 w-4"/>
               </button>
             )}
             <button
@@ -1014,7 +1060,7 @@ export default function BibleApp(){
               className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
             >
               <span className="hidden sm:inline">Settings</span>
-              <span>⚙️</span>
+              <Icon.Settings className="h-4 w-4"/>
             </button>
             {/* Mobile controls toggle now in bottom tab bar */}
             <button
@@ -1023,7 +1069,11 @@ export default function BibleApp(){
               className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
             >
               <span className="hidden sm:inline">{theme==='system' ? 'System' : (theme==='dark' ? 'Dark' : 'Light')}</span>
-              <span>{(theme==='dark'||(theme==='system'&&systemPrefersDark))? '☀️':'🌙'}</span>
+              {(theme==='dark'||(theme==='system'&&systemPrefersDark)) ? (
+                <Icon.Sun className="h-4 w-4"/>
+              ) : (
+                <Icon.Moon className="h-4 w-4"/>
+              )}
             </button>
           </div>
         </div>
