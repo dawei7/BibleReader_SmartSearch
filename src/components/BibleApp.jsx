@@ -29,8 +29,15 @@ const Icon = {
   ),
   Settings: (props)=> (
     <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>
+      {/* Sliders icon (distinct from sun) */}
+      <line x1="6" y1="3" x2="6" y2="21"/>
+      <line x1="12" y1="3" x2="12" y2="21"/>
+      <line x1="18" y1="3" x2="18" y2="21"/>
+      <g fill="currentColor" stroke="none">
+        <rect x="4" y="7" width="4" height="4" rx="1"/>
+        <rect x="10" y="11" width="4" height="4" rx="1"/>
+        <rect x="16" y="5" width="4" height="4" rx="1"/>
+      </g>
     </svg>
   ),
   Sun: (props)=> (
@@ -1027,8 +1034,7 @@ export default function BibleApp(){
                     setMode(t);
                   }}
                 >
-          {t==='read' ? <Icon.Read className="h-4 w-4"/> : <Icon.Search className="h-4 w-4"/>}
-                  <span className="hidden sm:inline ml-1">{t==='read' ? 'Read' : 'Search'}</span>
+                  {t==='read' ? <Icon.Read className="h-4 w-4"/> : <Icon.Search className="h-4 w-4"/>}
                 </button>
               ))}
             </nav>
@@ -1059,7 +1065,6 @@ export default function BibleApp(){
               aria-label="Settings"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
             >
-              <span className="hidden sm:inline">Settings</span>
               <Icon.Settings className="h-4 w-4"/>
             </button>
             {/* Mobile controls toggle now in bottom tab bar */}
