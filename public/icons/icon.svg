@@ -8,7 +8,6 @@
   </defs>
   <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="url(#g)"/>
   <g fill="#fff" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="900">
-    <text x="128" y="308" font-size="220">A</text>
-    <text x="286" y="308" font-size="220">Ω</text>
+    <text x="256" y="256" font-size="240" text-anchor="middle" dominant-baseline="central" letter-spacing="2">AΩ</text>
   </g>
 </svg>
