@@ -128,6 +128,9 @@ export default function BibleApp(){
     const [highlightInRead,setHighlightInRead]=useState(false);
     const [pendingScrollVerse,setPendingScrollVerse]=useState(null);
   const [stickyReadHeight,setStickyReadHeight]=useState(0);
+  // PWA install
+  const [deferredPrompt,setDeferredPrompt]=useState(null);
+  const [canInstall,setCanInstall]=useState(false);
   // Quick confirmation when saving a bookmark
   const [showSaveToast,setShowSaveToast]=useState(false);
   // Settings management helpers (import/export/share)
@@ -456,6 +459,22 @@ export default function BibleApp(){
     if(isDark) root.classList.add('dark'); else root.classList.remove('dark');
     try { localStorage.setItem('br_theme', theme); } catch {}
   },[theme, systemPrefersDark]);
+  // Capture beforeinstallprompt to show Install button
+  useEffect(()=>{
+    function onBIP(e){ e.preventDefault(); setDeferredPrompt(e); setCanInstall(true); }
+    window.addEventListener('beforeinstallprompt', onBIP);
+    function onInstalled(){ setCanInstall(false); setDeferredPrompt(null); }
+    window.addEventListener('appinstalled', onInstalled);
+    return ()=>{ window.removeEventListener('beforeinstallprompt', onBIP); window.removeEventListener('appinstalled', onInstalled); };
+  },[]);
+  async function onInstall(){
+    try {
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if(choice?.outcome === 'accepted'){ setCanInstall(false); setDeferredPrompt(null); }
+    } catch {}
+  }
   // Close About overlay on Escape
   useEffect(()=>{ if(!showAbout) return; const onKey=(e)=>{ if(e.key==='Escape') setShowAbout(false); }; window.addEventListener('keydown',onKey); return ()=> window.removeEventListener('keydown',onKey); },[showAbout]);
   const currentBook = bible?.[bookIdx]; const chapterCount=currentBook?.chapters.length || 0; const verseCount=currentBook?.chapters[chapterIdx]?.length || 0; const vEndEffective = vEnd===0? verseCount : clamp(vEnd,1,verseCount); const vStartEffective = clamp(vStart,1,vEndEffective); const searchObj = useMemo(()=> buildSearchRegex(query,searchMode,{caseSensitive}),[query,searchMode,caseSensitive]);
@@ -960,6 +979,17 @@ export default function BibleApp(){
                 >{t==='read'? 'Read':'Search'}</button>
               ))}
             </nav>
+            {canInstall && (
+              <button
+                onClick={onInstall}
+                aria-label="Install app"
+                title="Install on this device"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
+              >
+                <span className="hidden sm:inline">Install</span>
+                <span>⬇️</span>
+              </button>
+            )}
             {mode==='read' && (
               <button
                 onClick={saveCurrentPosition}
