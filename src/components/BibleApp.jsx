@@ -964,6 +964,8 @@ export default function BibleApp(){
               {['read','search'].map(t => (
                 <button
                   key={t}
+                  aria-label={t==='read' ? 'Read' : 'Search'}
+                  title={t==='read' ? 'Read' : 'Search'}
                   className={classNames('px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                     // @ts-ignore existing mode
                     mode===t? 'bg-white dark:bg-slate-900 shadow border border-slate-200 dark:border-slate-600':'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white')}
@@ -978,7 +980,10 @@ export default function BibleApp(){
                     }
                     setMode(t);
                   }}
-                >{t==='read'? 'Read':'Search'}</button>
+                >
+                  <span aria-hidden>{t==='read' ? '📖' : '🔎'}</span>
+                  <span className="hidden sm:inline ml-1">{t==='read' ? 'Read' : 'Search'}</span>
+                </button>
               ))}
             </nav>
             {canInstall && (
