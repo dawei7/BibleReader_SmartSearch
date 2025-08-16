@@ -103,7 +103,7 @@ function highlightText(text, regexOrObj){
 export default function BibleApp(){
   // Core state (some variables referenced further below were originally defined earlier in file)
   const [bible,setBible]=useState(null);
-  const [version,setVersion]=useState('en_kjv');
+  const [version,setVersion]=useState('de_schlachter');
   const [mode,setMode]=useState('read');
   const [bookIdx,setBookIdx]=useState(0);
   const [chapterIdx,setChapterIdx]=useState(0);
@@ -128,6 +128,8 @@ export default function BibleApp(){
     const [highlightInRead,setHighlightInRead]=useState(false);
     const [pendingScrollVerse,setPendingScrollVerse]=useState(null);
   const [stickyReadHeight,setStickyReadHeight]=useState(0);
+  // Quick confirmation when saving a bookmark
+  const [showSaveToast,setShowSaveToast]=useState(false);
   // Settings management helpers (import/export/share)
   // (No visible settings sharing UI; persistence via localStorage happens automatically)
   // Settings overlay and reader preferences
@@ -157,6 +159,9 @@ export default function BibleApp(){
       else setTheme('system');
       const v = localStorage.getItem('br_version');
       if(v) storedVersionRef.current = v;
+      if(v){
+        try { const raw = localStorage.getItem(`br_default_pos_${v}`); if(raw){ const p=JSON.parse(raw); setDefaultBookIdx(typeof p.bookIdx==='number'? p.bookIdx: null); setDefaultChapterIdx(typeof p.chapterIdx==='number'? p.chapterIdx: null); } } catch {}
+      }
     } catch { /* ignore */ }
   },[]);
   // Track system color scheme
@@ -181,14 +186,41 @@ export default function BibleApp(){
   function normalizeBible(data){ data.forEach(b=>{ if(!b.name) b.name = b.abbrev? String(b.abbrev).toUpperCase():'Unknown'; }); }
   function validateBibleStructure(raw){ return Array.isArray(raw) && raw.every(b=> b && typeof b==='object' && Array.isArray(b.chapters)); }
   function coerceBible(raw){ if(validateBibleStructure(raw)) return raw; if(raw && typeof raw==='object'){ const cand = raw.books || raw.bible || raw.data; if(validateBibleStructure(cand)) return cand; } throw new Error('Invalid JSON format'); }
-  async function loadBibleVersion(abbr){
+  async function loadBibleVersion(abbr, opts={}){
+    const persist = opts.persist !== false;
     if(!abbr) return false;
+  // Retrieve saved default (from Settings) and last position (from reading). Default takes precedence.
+  let savedPos = null; let defaultPos = null;
+  try { const raw = localStorage.getItem(`br_pos_${abbr}`); if(raw) savedPos = JSON.parse(raw); } catch {}
+  try { const rawD = localStorage.getItem(`br_default_pos_${abbr}`); if(rawD) defaultPos = JSON.parse(rawD); } catch {}
     // Cache hit
     if(bibleCacheRef.current[abbr]){
-      setBible(bibleCacheRef.current[abbr]);
+      const data = bibleCacheRef.current[abbr];
+      setBible(data);
       setVersion(abbr);
-  try { localStorage.setItem('br_version', abbr); } catch {}
-      setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0);
+  try { if(persist) localStorage.setItem('br_version', abbr); } catch {}
+      // Apply default (book required; chapter optional=>first), else last position, else start
+      let posB = null, posC = null;
+      if(defaultPos && typeof defaultPos.bookIdx==='number'){
+        posB = defaultPos.bookIdx;
+        posC = (typeof defaultPos.chapterIdx==='number') ? defaultPos.chapterIdx : 0;
+      } else if(savedPos && typeof savedPos.bookIdx==='number' && typeof savedPos.chapterIdx==='number'){
+        posB = savedPos.bookIdx; posC = savedPos.chapterIdx;
+      }
+      if(posB!=null && posC!=null){
+        const bMax = Math.max(0, (data?.length||1)-1);
+        const bIdx = Math.min(Math.max(0, posB|0), bMax);
+        const cMax = Math.max(0, ((data?.[bIdx]?.chapters?.length)||1)-1);
+        const cIdx = Math.min(Math.max(0, posC|0), cMax);
+        const vCount = (data?.[bIdx]?.chapters?.[cIdx]?.length)||0;
+        const vStartSaved = Math.max(1, Number((defaultPos&&typeof defaultPos.bookIdx==='number')? defaultPos.vStart : savedPos?.vStart)||1);
+        const vEndSaved = Math.max(0, Number((defaultPos&&typeof defaultPos.bookIdx==='number')? defaultPos.vEnd : savedPos?.vEnd)||0);
+        const vEndEff = vEndSaved===0? 0 : Math.min(Math.max(1, vEndSaved), vCount);
+        const vStartEff = Math.min(vStartSaved, vEndEff||vStartSaved);
+        setBookIdx(bIdx); setChapterIdx(cIdx); setVStart(vStartEff); setVEnd(vEndEff);
+      } else {
+        setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0);
+      }
       setAttemptLog(l=>[...l,`cacheHit:${abbr}`].slice(-60));
       return true;
     }
@@ -256,10 +288,31 @@ export default function BibleApp(){
       }
       setBible(data);
       setVersion(abbr);
-  try { localStorage.setItem('br_version', abbr); } catch {}
+  try { if(persist) localStorage.setItem('br_version', abbr); } catch {}
       if(data.length>=3) bibleCacheRef.current[abbr]=data;
       setAttemptLog(l=>[...l,`success:${abbr}`].slice(-60));
-      setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0);
+      // Apply default (book required; chapter optional=>first), else last position, else start
+      let posB2 = null, posC2 = null;
+      if(defaultPos && typeof defaultPos.bookIdx==='number'){
+        posB2 = defaultPos.bookIdx;
+        posC2 = (typeof defaultPos.chapterIdx==='number') ? defaultPos.chapterIdx : 0;
+      } else if(savedPos && typeof savedPos.bookIdx==='number' && typeof savedPos.chapterIdx==='number'){
+        posB2 = savedPos.bookIdx; posC2 = savedPos.chapterIdx;
+      }
+      if(posB2!=null && posC2!=null){
+        const bMax = Math.max(0, (data?.length||1)-1);
+        const bIdx = Math.min(Math.max(0, posB2|0), bMax);
+        const cMax = Math.max(0, ((data?.[bIdx]?.chapters?.length)||1)-1);
+        const cIdx = Math.min(Math.max(0, posC2|0), cMax);
+        const vCount = (data?.[bIdx]?.chapters?.[cIdx]?.length)||0;
+        const vStartSaved = Math.max(1, Number((defaultPos&&typeof defaultPos.bookIdx==='number')? defaultPos.vStart : savedPos?.vStart)||1);
+        const vEndSaved = Math.max(0, Number((defaultPos&&typeof defaultPos.bookIdx==='number')? defaultPos.vEnd : savedPos?.vEnd)||0);
+        const vEndEff = vEndSaved===0? 0 : Math.min(Math.max(1, vEndSaved), vCount);
+        const vStartEff = Math.min(vStartSaved, vEndEff||vStartSaved);
+        setBookIdx(bIdx); setChapterIdx(cIdx); setVStart(vStartEff); setVEnd(vEndEff);
+      } else {
+        setBookIdx(0); setChapterIdx(0); setVStart(1); setVEnd(0);
+      }
       return true;
     } catch(e){
       setVersionError(`Error loading "${abbr}": ${e.message||e}`);
@@ -285,19 +338,32 @@ export default function BibleApp(){
       const ordered=[...picked,...rest];
       setVersions(ordered);
       if(ordered.length){
+        let loadedAny = false;
         const stored = storedVersionRef.current && ordered.find(v=> v.abbreviation===storedVersionRef.current);
         if(stored){
           const ok = await loadBibleVersion(stored.abbreviation);
+          loadedAny = loadedAny || ok;
           if(!ok){
             // fall back to first priority
             const preferred=ordered[0];
-            if(preferred) await loadBibleVersion(preferred.abbreviation);
+            if(preferred){
+              const ok2 = await loadBibleVersion(preferred.abbreviation);
+              loadedAny = loadedAny || ok2;
+            }
           }
         } else {
           const preferred=ordered[0];
-          if(preferred) await loadBibleVersion(preferred.abbreviation);
+          if(preferred){
+            const ok = await loadBibleVersion(preferred.abbreviation);
+            loadedAny = loadedAny || ok;
+          }
         }
-        if(!bible){ const others=ordered.slice(1); if(others.length) attemptLoadAny(others); }
+        // Do NOT attempt to load other versions if we've already loaded one;
+        // this avoids overriding the user's stored selection on startup.
+        if(!loadedAny){
+          const others=ordered.slice(1);
+          if(others.length) attemptLoadAny(others);
+        }
       }
     } catch {
       if(!cancelled){ setBible(SAMPLE_BIBLE); setVersion('sample'); }
@@ -393,6 +459,15 @@ export default function BibleApp(){
   // Close About overlay on Escape
   useEffect(()=>{ if(!showAbout) return; const onKey=(e)=>{ if(e.key==='Escape') setShowAbout(false); }; window.addEventListener('keydown',onKey); return ()=> window.removeEventListener('keydown',onKey); },[showAbout]);
   const currentBook = bible?.[bookIdx]; const chapterCount=currentBook?.chapters.length || 0; const verseCount=currentBook?.chapters[chapterIdx]?.length || 0; const vEndEffective = vEnd===0? verseCount : clamp(vEnd,1,verseCount); const vStartEffective = clamp(vStart,1,vEndEffective); const searchObj = useMemo(()=> buildSearchRegex(query,searchMode,{caseSensitive}),[query,searchMode,caseSensitive]);
+
+  // Persist reading position per version whenever it changes
+  useEffect(()=>{
+    if(!version) return;
+    try {
+      const pos = { bookIdx, chapterIdx, vStart, vEnd };
+      localStorage.setItem(`br_pos_${version}`, JSON.stringify(pos));
+    } catch {}
+  },[version,bookIdx,chapterIdx,vStart,vEnd]);
   useEffect(()=>{ const t=setTimeout(()=> setQuery(queryInput.trim()),500); return ()=> clearTimeout(t); },[queryInput]);
   const readVerses = useMemo(()=> !currentBook? []: (currentBook.chapters[chapterIdx]||[]).slice(vStartEffective-1,vEndEffective).map((t,i)=>({n:i+vStartEffective,text:t})),[currentBook,chapterIdx,vStartEffective,vEndEffective]);
   const searchResults = useMemo(()=>{ if(!bible || !searchObj) return { rows:[], totalMatches:0, perBook:{}, perChap:{}, exceeded:false }; const targetBooks = searchScope==='book'? [bible[bookIdx]].filter(Boolean) : bible; if(!targetBooks.length) return { rows:[], totalMatches:0, perBook:{}, perChap:{}, exceeded:false }; const rows=[]; const perBook={}; const perChap={}; let total=0; let exceeded=false; outer: for(const b of targetBooks){ let cStart=0, cEnd=b.chapters.length-1; if(searchScope==='book'){ const totalCh=b.chapters.length; const startClamped=Math.max(1,Math.min(chapFrom,totalCh)); const endRaw= chapTo===0? totalCh : Math.max(1,Math.min(chapTo,totalCh)); const endClamped=Math.max(startClamped,endRaw); cStart=startClamped-1; cEnd=endClamped-1; } for(let cIdx=cStart;cIdx<=cEnd;cIdx++){ const ch=b.chapters[cIdx]; for(let vi=0;vi<ch.length;vi++){ const v=ch[vi]; const {count,matched}=countMatches(v,searchObj); if(matched && count>0){ rows.push({ book:b.name, chapter:cIdx+1, verse:vi+1, text:v, count }); total+=count; perBook[b.name]=(perBook[b.name]||0)+count; const key=`${b.name} ${cIdx+1}`; perChap[key]=(perChap[key]||0)+count; if(rows.length>MAX_SEARCH_RESULTS){ exceeded=true; break outer; } } } } } const orderMap=new Map(); bible.forEach((b,i)=>orderMap.set(b.name,i)); rows.sort((a,b)=>{ const ai=orderMap.get(a.book); const bi=orderMap.get(b.book); if(ai!==bi) return ai-bi; if(a.chapter!==b.chapter) return a.chapter-b.chapter; return a.verse-b.verse; }); if(exceeded){ return { rows:[], totalMatches: total, perBook:{}, perChap:{}, exceeded:true }; } return { rows, totalMatches:total, perBook, perChap, exceeded:false }; },[bible,searchObj,searchScope,bookIdx,chapFrom,chapTo]);
@@ -436,8 +511,15 @@ export default function BibleApp(){
   const mobileChapterRef = useRef(null);
   const [showVersionPicker,setShowVersionPicker] = useState(false);
   const [tempVersion,setTempVersion] = useState('');
+  const [versionPickerContext,setVersionPickerContext] = useState('controls'); // 'controls' | 'settings'
   const [showBookPicker,setShowBookPicker] = useState(false);
   const [showChapterPicker,setShowChapterPicker] = useState(false);
+  // Picker contexts for version/book/chapter (controls vs settings)
+  const [bookPickerContext,setBookPickerContext] = useState('controls'); // 'controls' | 'settings'
+  const [chapterPickerContext,setChapterPickerContext] = useState('controls'); // 'controls' | 'settings'
+  // Settings defaults (persisted per version)
+  const [defaultBookIdx,setDefaultBookIdx] = useState(null);
+  const [defaultChapterIdx,setDefaultChapterIdx] = useState(null);
   const [tempBookIdx,setTempBookIdx] = useState(0);
   const [tempChapterIdx,setTempChapterIdx] = useState(0);
   const bottomBarRef = useRef(null);
@@ -691,16 +773,75 @@ export default function BibleApp(){
     const v = versions.find(v=> v.abbreviation===version);
     return v ? v.name : version;
   },[versions,version]);
-  function openVersionPicker(){ setTempVersion(mVersion||version); setShowVersionPicker(true); }
-  function applyVersionPicker(){ if(tempVersion) setMVersion(tempVersion); setShowVersionPicker(false); }
-  function openBookPicker(){
-    setTempBookIdx(mBookIdx);
+  function saveCurrentPosition(){
+    try {
+      // Persist as the app-wide defaults used on load (same keys Settings uses)
+      const defKey = `br_default_pos_${version}`;
+      const pos = { bookIdx, chapterIdx };
+      localStorage.setItem(defKey, JSON.stringify(pos));
+      localStorage.setItem('br_version', version);
+      // Also sync last-read position for completeness
+      localStorage.setItem(`br_pos_${version}`, JSON.stringify({ bookIdx, chapterIdx, vStart: 1, vEnd: 0 }));
+      // Update Settings state immediately so UI reflects new defaults
+      setDefaultBookIdx(bookIdx);
+      setDefaultChapterIdx(chapterIdx);
+      setShowSaveToast(true);
+      setTimeout(()=> setShowSaveToast(false), 1200);
+    } catch {}
+  }
+  function openVersionPicker(ctx){
+    const context = ctx || 'controls';
+  // Ensure the shared overlay container is visible so the picker can render
+  setShowControls(true);
+    setVersionPickerContext(context);
+    setTempVersion(mVersion||version);
+    setShowVersionPicker(true);
+  }
+  function clearDefaultBook(){
+    setDefaultBookIdx(null);
+    setDefaultChapterIdx(null);
+    try { if(version) localStorage.removeItem(`br_default_pos_${version}`); } catch {}
+  }
+  function clearDefaultChapter(){
+    setDefaultChapterIdx(null);
+    try {
+      if(!version) return;
+      if(defaultBookIdx==null){ localStorage.removeItem(`br_default_pos_${version}`); }
+      else { localStorage.setItem(`br_default_pos_${version}`, JSON.stringify({ bookIdx: defaultBookIdx })); }
+    } catch {}
+  }
+  function applyVersionPicker(){
+    if(!tempVersion){ setShowVersionPicker(false); return; }
+    if(versionPickerContext==='settings'){
+      // Apply immediately and persist as the standard version
+      loadBibleVersion(tempVersion);
+      setShowVersionPicker(false);
+      setVersionPickerContext('controls');
+      setShowControls(false);
+      return;
+    }
+    // In controls overlay, stage the selection for Apply button
+    setMVersion(tempVersion);
+    setShowVersionPicker(false);
+  }
+  function openBookPicker(ctx){
+    const context = ctx || 'controls';
+    setBookPickerContext(context);
+    setShowControls(true);
+    const seedBook = context==='settings' ? (defaultBookIdx ?? mBookIdx) : mBookIdx;
+    setTempBookIdx(seedBook);
     // Reset chapter temp when switching books inside picker
     setTempChapterIdx(0);
     setShowBookPicker(true);
   }
-  function openChapterPicker(){
-    if(mode==='read'){
+  function openChapterPicker(ctx){
+    const context = ctx || 'controls';
+    setChapterPickerContext(context);
+    setShowControls(true);
+    if(context==='settings'){
+      // In settings, seed from defaults
+      setTempChapterIdx((defaultChapterIdx ?? 0));
+    } else if(mode==='read'){
       setTempChapterIdx(mChapterIdx);
     } else {
       // derive from current search chapter range (use from as representative)
@@ -708,9 +849,24 @@ export default function BibleApp(){
     }
     setShowChapterPicker(true);
   }
-  function applyBookPicker(){ setMBookIdx(tempBookIdx); setMChapterIdx(0); setShowBookPicker(false); }
+  function applyBookPicker(){
+    if(bookPickerContext==='settings'){
+      setDefaultBookIdx(tempBookIdx);
+      // Reset default chapter to first of selected book
+      setDefaultChapterIdx(0);
+      try { if(version) localStorage.setItem(`br_default_pos_${version}`, JSON.stringify({ bookIdx: tempBookIdx, chapterIdx: 0 })); } catch {}
+  setShowControls(false);
+    } else {
+      setMBookIdx(tempBookIdx); setMChapterIdx(0);
+    }
+    setShowBookPicker(false);
+  }
   function applyChapterPicker(){
-    if(mode==='read'){
+    if(chapterPickerContext==='settings'){
+      setDefaultChapterIdx(tempChapterIdx);
+      try { if(version) localStorage.setItem(`br_default_pos_${version}`, JSON.stringify({ bookIdx: defaultBookIdx ?? mBookIdx, chapterIdx: tempChapterIdx })); } catch {}
+  setShowControls(false);
+    } else if(mode==='read'){
       setMChapterIdx(tempChapterIdx);
     } else {
       // In search mode treat chapter picker as selecting a single chapter range
@@ -737,7 +893,7 @@ export default function BibleApp(){
       setShowControls(false);
     };
     if(mVersion && mVersion!==version){
-      loadBibleVersion(mVersion).then(()=> commit());
+      loadBibleVersion(mVersion, { persist: false }).then(()=> commit());
     } else {
       commit();
     }
@@ -757,7 +913,7 @@ export default function BibleApp(){
       setShowControls(false);
     };
     if(mVersion && mVersion!==version){
-      loadBibleVersion(mVersion).then(()=> commit());
+      loadBibleVersion(mVersion, { persist: false }).then(()=> commit());
     } else {
       commit();
     }
@@ -804,6 +960,17 @@ export default function BibleApp(){
                 >{t==='read'? 'Read':'Search'}</button>
               ))}
             </nav>
+            {mode==='read' && (
+              <button
+                onClick={saveCurrentPosition}
+                aria-label="Save current position"
+                title="Save current position"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
+              >
+                <span className="hidden sm:inline">Save</span>
+                <span>💾</span>
+              </button>
+            )}
             <button
               onClick={()=> setShowSettings(true)}
               aria-label="Settings"
@@ -824,6 +991,11 @@ export default function BibleApp(){
           </div>
         </div>
       </header>
+    {mode==='read' && showSaveToast && (
+        <div className="fixed top-14 right-3 z-50 text-xs px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200 shadow">
+      Saved as defaults
+        </div>
+      )}
 
   <main
   className="flex-1 w-full px-0 pb-0 overflow-hidden transition-[padding]"
@@ -1031,6 +1203,39 @@ export default function BibleApp(){
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">Reader width: <span className="font-semibold">{readerWidthPct}%</span></label>
               <input type="range" min="20" max="100" step="1" value={readerWidthPct} onChange={e=> setReaderWidthPct(clamp(parseInt(e.target.value)||80,20,100))} className="w-full" />
             </div>
+          </div>
+        </div>
+
+        {/* Bible */}
+        <div className="space-y-3">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Bible</div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Default version</label>
+            <button onClick={()=> openVersionPicker('settings')} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
+              <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{currentVersionObj? currentVersionObj.name : (version)}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
+            </button>
+            {versionError && <div className="mt-1 text-[11px] text-red-600">{versionError}</div>}
+            <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Saved as your standard version on this device.</div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Default book</label>
+            <button onClick={()=>{ /* open a dedicated settings book overlay */ openBookPicker('settings'); }} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
+              <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{(()=>{ if(defaultBookIdx==null) return 'None'; const b=(bible??[])[defaultBookIdx]; return b? b.name : 'None'; })()}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
+            </button>
+            <div className="mt-1 flex items-center gap-2">
+              <button onClick={clearDefaultBook} className="text-[11px] underline decoration-dotted text-slate-500 dark:text-slate-400">Set to None</button>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">Used when opening this Bible.</span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Default chapter</label>
+            <button onClick={()=>{ openChapterPicker('settings'); }} className="w-full text-left px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm flex items-center justify-between">
+              <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{(()=>{ if(defaultChapterIdx==null) return 'None'; const bi = (defaultBookIdx ?? 0); const cc=(bible?.[bi]?.chapters.length)||0; const ch = defaultChapterIdx; return cc? `Chapter ${ch+1}`:'None'; })()}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Change ▸</span>
+            </button>
+            <div className="mt-1"><button onClick={clearDefaultChapter} className="text-[11px] underline decoration-dotted text-slate-500 dark:text-slate-400">Set to None</button></div>
           </div>
         </div>
 
@@ -1386,7 +1591,7 @@ export default function BibleApp(){
                 <div className="absolute inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
                   <div className="sticky top-0 px-4 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
                     <div className="text-sm font-semibold tracking-wide">Select Version</div>
-                    <button onClick={()=> setShowVersionPicker(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
+                    <button onClick={()=> { setShowVersionPicker(false); if(versionPickerContext==='settings') setShowControls(false); }} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
                   </div>
                   <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
                     {versionsByLanguage.map(([lang,list])=> (
@@ -1411,17 +1616,17 @@ export default function BibleApp(){
                       </div>
                     )}
                   </div>
-                  <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex">
-                    <button onClick={applyVersionPicker} disabled={!tempVersion} className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 disabled:opacity-50">Apply</button>
-                  </div>
+      <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex">
+        <button onClick={applyVersionPicker} disabled={!tempVersion} className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 disabled:opacity-50">Apply</button>
+      </div>
                 </div>
               )}
               {/* Book Picker Overlay */}
-              {showBookPicker && (
+      {showBookPicker && (
                 <div className="absolute inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
                   <div className="sticky top-0 px-4 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
-                    <div className="text-sm font-semibold tracking-wide">Select Book</div>
-                    <button onClick={()=> setShowBookPicker(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
+        <div className="text-sm font-semibold tracking-wide">{bookPickerContext==='settings' ? 'Default Book' : 'Select Book'}</div>
+                    <button onClick={()=> { setShowBookPicker(false); if(bookPickerContext==='settings') setShowControls(false); }} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
                   </div>
                   <div className="flex-1 overflow-y-auto px-4 py-4">
                     <div className="grid grid-cols-6 gap-2">
@@ -1436,15 +1641,15 @@ export default function BibleApp(){
                 </div>
               )}
               {/* Chapter Picker Overlay */}
-              {showChapterPicker && (
+      {showChapterPicker && (
                 <div className="absolute inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
                   <div className="sticky top-0 px-4 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
-                    <div className="text-sm font-semibold tracking-wide">Select Chapter</div>
-                    <button onClick={()=> setShowChapterPicker(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
+        <div className="text-sm font-semibold tracking-wide">{chapterPickerContext==='settings' ? 'Default Chapter' : 'Select Chapter'}</div>
+                    <button onClick={()=> { setShowChapterPicker(false); if(chapterPickerContext==='settings') setShowControls(false); }} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
                   </div>
                   <div className="flex-1 overflow-y-auto px-4 py-4">
                     <div className="grid grid-cols-6 gap-2">
-                      {Array.from({length: mChapterCount||0}, (_,n)=> n+1).map(n=> { const active = n===tempChapterIdx+1; return (
+          {Array.from({length: (chapterPickerContext==='settings' ? ((bible?.[(defaultBookIdx ?? mBookIdx)]?.chapters.length)||0) : (mChapterCount||0))}, (_,n)=> n+1).map(n=> { const active = n===tempChapterIdx+1; return (
                         <button key={n} onClick={()=>{ setTempChapterIdx(n-1); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{n}</button>
                       ); })}
                     </div>
