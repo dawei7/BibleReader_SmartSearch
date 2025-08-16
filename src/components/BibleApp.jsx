@@ -184,6 +184,8 @@ export default function BibleApp(){
   // PWA install
   const [deferredPrompt,setDeferredPrompt]=useState(null);
   const [canInstall,setCanInstall]=useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [showInstallConfirm, setShowInstallConfirm] = useState(false);
   // Quick confirmation when saving a bookmark
   const [showSaveToast,setShowSaveToast]=useState(false);
   // Settings management helpers (import/export/share)
@@ -514,21 +516,51 @@ export default function BibleApp(){
   },[theme, systemPrefersDark]);
   // Capture beforeinstallprompt to show Install button
   useEffect(()=>{
-  function onBIP(e){ e.preventDefault(); setDeferredPrompt(e); setCanInstall(true); }
-  window.addEventListener('beforeinstallprompt', onBIP);
-  function onInstalled(){ setCanInstall(false); setDeferredPrompt(null); }
-  window.addEventListener('appinstalled', onInstalled);
-  // Safety: if browser never fires BIP (e.g., iOS Safari), ensure flag is false
-  const t = setTimeout(()=>{ if(!deferredPrompt) setCanInstall(false); }, 4000);
-  return ()=>{ clearTimeout(t); window.removeEventListener('beforeinstallprompt', onBIP); window.removeEventListener('appinstalled', onInstalled); };
+    // Track install status (Chrome/Edge + iOS Safari)
+    const updateInstalled = () => {
+      try {
+        const standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                           window.matchMedia('(display-mode: window-controls-overlay)').matches;
+        // iOS Safari
+        // @ts-ignore
+        const iosStandalone = !!window.navigator.standalone;
+        setIsInstalled(!!(standalone || iosStandalone));
+      } catch { setIsInstalled(false); }
+    };
+    updateInstalled();
+
+    const onInstalled = () => { setIsInstalled(true); setDeferredPrompt(null); setCanInstall(false); };
+    window.addEventListener('appinstalled', onInstalled);
+
+    const mql = window.matchMedia('(display-mode: standalone)');
+    const onChange = () => updateInstalled();
+    if (mql.addEventListener) mql.addEventListener('change', onChange); else if (mql.addListener) mql.addListener(onChange);
+
+    const onBIP = (e) => { e.preventDefault(); setDeferredPrompt(e); setCanInstall(true); };
+    window.addEventListener('beforeinstallprompt', onBIP);
+
+    return ()=>{
+      window.removeEventListener('beforeinstallprompt', onBIP);
+      window.removeEventListener('appinstalled', onInstalled);
+      if (mql.removeEventListener) mql.removeEventListener('change', onChange); else if (mql.removeListener) mql.removeListener(onChange);
+    };
   },[]);
-  async function onInstall(){
+  useEffect(()=>{
+    setCanInstall(!!deferredPrompt && !isInstalled);
+  },[deferredPrompt, isInstalled]);
+  async function proceedInstall(){
     try {
-      if(!deferredPrompt) return;
+      if(!deferredPrompt) { setShowInstallConfirm(false); return; }
+      setShowInstallConfirm(false);
       deferredPrompt.prompt();
       const choice = await deferredPrompt.userChoice;
-      if(choice?.outcome === 'accepted'){ setCanInstall(false); setDeferredPrompt(null); }
-    } catch {}
+      if(choice?.outcome === 'accepted'){
+        setCanInstall(false);
+        setDeferredPrompt(null);
+      }
+    } catch {
+      setShowInstallConfirm(false);
+    }
   }
   // Close About overlay on Escape
   useEffect(()=>{ if(!showAbout) return; const onKey=(e)=>{ if(e.key==='Escape') setShowAbout(false); }; window.addEventListener('keydown',onKey); return ()=> window.removeEventListener('keydown',onKey); },[showAbout]);
@@ -683,7 +715,7 @@ export default function BibleApp(){
   // Lock background scroll when full-screen overlays open (controls/about/stats)
   useEffect(()=>{
     const body = document.body;
-    const needLock = showControls || showAbout || showStats;
+    const needLock = showControls || showAbout || showStats || showInstallConfirm;
     if(needLock){
       const prev = body.style.overflow;
       body.dataset._prevOverflow = prev;
@@ -692,7 +724,9 @@ export default function BibleApp(){
       body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow;
     }
     return ()=>{ if(body.dataset._prevOverflow!==undefined){ body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow; } };
-  },[showControls,showAbout,showStats]);
+  },[showControls,showAbout,showStats,showInstallConfirm]);
+  // Close Install confirm on Escape
+  useEffect(()=>{ if(!showInstallConfirm) return; const onKey=(e)=>{ if(e.key==='Escape') setShowInstallConfirm(false); }; window.addEventListener('keydown',onKey); return ()=> window.removeEventListener('keydown',onKey); },[showInstallConfirm]);
   // Sync the top fancy scrollbar with the hidden main horizontal scroller in Statistics overlay
   useEffect(()=>{
     if(!showStats) return;
@@ -1038,17 +1072,7 @@ export default function BibleApp(){
                 </button>
               ))}
             </nav>
-            {canInstall && (
-              <button
-                onClick={onInstall}
-                aria-label="Install app"
-                title="Install on this device"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
-              >
-                <span className="hidden sm:inline">Install</span>
-                <Icon.Install className="h-4 w-4"/>
-              </button>
-            )}
+            {/* Install icon will be placed after Settings */}
             {mode==='read' && (
               <button
                 onClick={saveCurrentPosition}
@@ -1066,22 +1090,42 @@ export default function BibleApp(){
             >
               <Icon.Settings className="h-4 w-4"/>
             </button>
+      {canInstall && (
+              <button
+        onClick={()=> setShowInstallConfirm(true)}
+                aria-label="Install app"
+                title="Install on this device"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
+              >
+                <Icon.Install className="h-4 w-4"/>
+              </button>
+            )}
             {/* Mobile controls toggle now in bottom tab bar */}
-            <button
-              onClick={()=> setTheme(th=> th==='system' ? 'light' : th==='light' ? 'dark' : 'system')}
-              aria-label="Cycle theme"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
-            >
-              <span className="hidden sm:inline">{theme==='system' ? 'System' : (theme==='dark' ? 'Dark' : 'Light')}</span>
-              {(theme==='dark'||(theme==='system'&&systemPrefersDark)) ? (
-                <Icon.Sun className="h-4 w-4"/>
-              ) : (
-                <Icon.Moon className="h-4 w-4"/>
-              )}
-            </button>
+            {/* Theme selection removed from navbar; adjust theme in Settings */}
           </div>
         </div>
       </header>
+      {showInstallConfirm && (
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+              <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">Install this app?</div>
+            </div>
+            <div className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 space-y-2">
+              <p>Install Bible Reader to your device for a faster, full-screen experience. You’ll find it on your home screen and it works offline.</p>
+              <ul className="list-disc list-inside text-[12px] text-slate-500 dark:text-slate-400 space-y-1">
+                <li>No App Store required</li>
+                <li>Lightweight and private</li>
+                <li>Uninstall any time</li>
+              </ul>
+            </div>
+            <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-2">
+              <button onClick={()=> setShowInstallConfirm(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Not now</button>
+              <button onClick={proceedInstall} className="text-xs px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-indigo-600 text-white border border-slate-900 dark:border-indigo-600">Install</button>
+            </div>
+          </div>
+        </div>
+      )}
     {mode==='read' && showSaveToast && (
         <div className="fixed top-14 right-3 z-50 text-xs px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200 shadow">
       Saved as defaults
