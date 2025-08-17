@@ -2305,11 +2305,12 @@ export default function BibleApp(){
                   className={classNames('px-3 py-2 text-sm inline-flex items-center gap-2 focus:outline-none', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80')}
                   onClick={()=> setShowSleepTimer(true)}
                   title="Read for (choose minutes) or set stop-at (inclusive) chapter"
+                  aria-label="Open sleep timer and stop-at settings"
                   aria-haspopup="dialog"
                 >
                   <Icon.Clock className="h-5 w-5"/>
-                  <span className="font-medium">Read for</span>
                   <span className="tabular-nums">{formatMinutes(readForMinutes)}</span>
+                  <span className="sr-only">Open sleep timer and stop-at settings</span>
                   {ttsStatus==='playing' && sleepDeadlineRef.current>0 && (
                     (()=>{
                       const remaining = Math.max(0, sleepDeadlineRef.current - nowMs);
