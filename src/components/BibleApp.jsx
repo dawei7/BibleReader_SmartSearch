@@ -235,9 +235,7 @@ export default function BibleApp(){
   const [voicePrefMap, setVoicePrefMap] = useState(()=>{
     try { const raw = localStorage.getItem('br_tts_voice_prefs'); return raw? JSON.parse(raw) : {}; } catch { return {}; }
   });
-  const refreshVoices = useCallback(()=>{
-    try { voicesRef.current = window.speechSynthesis.getVoices(); setVoicesTick(t=>t+1); } catch {}
-  },[]);
+  // Manual refresh no longer exposed in UI; voices update via 'voiceschanged' event below.
   const ttsRunIdRef = useRef(0); // increments each time a new reading session starts/stops
   const currentUtterRef = useRef(null);
   // Remember the last verse index across stops (reset on version/book/chapter change)
@@ -1883,32 +1881,18 @@ export default function BibleApp(){
             <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Text‑to‑Speech</div>
             <div className="text-xs text-slate-600 dark:text-slate-300">
               <div className="mb-2">Manage voices for all languages used by your installed Bibles.</div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {versionLangCodes.map(code=>{
-                  const uri = (voicePrefMap||{})[code];
-                  const vObj = (voicesRef.current||[]).find(v=> v.voiceURI===uri);
-                  const label = LANG_LABELS[code] || code.toUpperCase();
-                  return (
-                    <div key={code} className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800">
-                      <span className="font-medium mr-1">{label}:</span>
-                      <span className="opacity-80">{vObj? vObj.name : 'Auto'}</span>
-                    </div>
-                  );
-                })}
-              </div>
               <div className="mt-2 flex items-center gap-2 flex-wrap">
                 <button onClick={()=> setShowVoicePicker(true)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Manage voices…</button>
-                <button onClick={refreshVoices} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Refresh</button>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Rate: <span className="font-semibold">{ttsRate.toFixed(2)}</span></label>
-                <input type="range" min="0.75" max="1.25" step="0.01" value={ttsRate} onChange={e=> setTtsRate(parseFloat(e.target.value)||1)} className="w-full" />
+                <input type="range" min="0.50" max="2.00" step="0.01" value={ttsRate} onChange={e=> setTtsRate(parseFloat(e.target.value)||1)} className="w-full" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Pitch (lower = deeper): <span className="font-semibold">{ttsPitch.toFixed(2)}</span></label>
-                <input type="range" min="0.50" max="1.20" step="0.01" value={ttsPitch} onChange={e=> setTtsPitch(parseFloat(e.target.value)||1)} className="w-full" />
+                <input type="range" min="0.25" max="2.00" step="0.01" value={ttsPitch} onChange={e=> setTtsPitch(parseFloat(e.target.value)||1)} className="w-full" />
               </div>
             </div>
           </div>
