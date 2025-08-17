@@ -1656,6 +1656,26 @@ export default function BibleApp(){
       </div>
   <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="space-y-4 text-sm leading-6 text-slate-700 dark:text-slate-300 max-w-2xl">
+          <h3 className="text-base font-semibold tracking-tight text-slate-800 dark:text-slate-100">About me</h3>
+          <p>
+            Hi, I’m <span className="font-medium">David Schmid</span>, a data engineer who loves AI and data science. I built this app to make Bible study fast, focused, and enjoyable.
+          </p>
+          <p>
+            As a conservative, Bible‑believing Christian, my aim is to pair deep respect for Scripture with modern technology—so it’s easier to read, search, and explore God’s Word.
+          </p>
+          <div className="pt-1 flex flex-wrap items-center gap-3 text-[13px]">
+            <a href="https://github.com/dawei7" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800">
+              <span className="font-medium">GitHub</span>
+              <span className="text-slate-500">/dawei7</span>
+            </a>
+            <a href="https://www.linkedin.com/in/david-schmid-56194772/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800">
+              <span className="font-medium">LinkedIn</span>
+              <span className="text-slate-500">@david-schmid</span>
+            </a>
+          </div>
+
+          <div className="my-4 border-t border-slate-200 dark:border-slate-700" />
+
           <h3 className="text-base font-semibold tracking-tight text-slate-800 dark:text-slate-100">Quick guide</h3>
 
           <div>
