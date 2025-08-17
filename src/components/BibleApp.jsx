@@ -1655,165 +1655,59 @@ export default function BibleApp(){
         </div>
       </div>
   <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="space-y-3 text-sm leading-6 text-slate-700 dark:text-slate-300 max-w-2xl">
-          <p>
-            Hi, I’m <span className="font-medium">David Schmid</span> (born 12 December 1986), a data engineer who loves AI and data science. With the help of GPT‑5 Agent Mode, I built this app to make Bible study fast, focused, and enjoyable.
-          </p>
-          <p>
-            As a conservative, Bible‑believing Christian, my aim is to pair deep respect for Scripture with modern technology—so it’s easier to read, search, and explore God’s Word.
-          </p>
-          <div className="pt-1 flex flex-wrap items-center gap-3 text-[13px]">
-            <a href="https://github.com/dawei7" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800">
-              <span className="font-medium">GitHub</span>
-              <span className="text-slate-500">/dawei7</span>
-            </a>
-            <a href="https://www.linkedin.com/in/david-schmid-56194772/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800">
-              <span className="font-medium">LinkedIn</span>
-              <span className="text-slate-500">@david-schmid</span>
-            </a>
+        <div className="space-y-4 text-sm leading-6 text-slate-700 dark:text-slate-300 max-w-2xl">
+          <h3 className="text-base font-semibold tracking-tight text-slate-800 dark:text-slate-100">Quick guide</h3>
+
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Modes</h4>
+            <ul className="mt-1 list-disc list-inside space-y-1">
+              <li><span className="font-medium">Read</span> — one chapter at a time with a simple, distraction‑free layout.</li>
+              <li><span className="font-medium">Search</span> — find verses fast. Choose All, Any, or Phrase; limit to whole Bible or a single book; optionally narrow to chapter ranges. Tap a result to jump to Read at that verse.</li>
+            </ul>
           </div>
 
-          {/* Divider (the “read line”) */}
-          <div className="my-4 border-t border-slate-200 dark:border-slate-700" />
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Reading & navigation</h4>
+            <ul className="mt-1 list-disc list-inside space-y-1">
+              <li>Use the top arrows to move to the next/previous chapter.</li>
+              <li>Open the bottom controls to pick Version · Book · Chapter.</li>
+              <li>Long‑press a verse to copy/share its text and reference.</li>
+              <li>Save (💾) stores your current Version/Book/Chapter as the default on this device.</li>
+            </ul>
+          </div>
 
-          {/* README / User Guide */}
-          <div className="space-y-4">
-            <h3 className="text-base font-semibold tracking-tight text-slate-800 dark:text-slate-100">README · User Guide</h3>
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Read aloud (voice)</h4>
+            <ul className="mt-1 list-disc list-inside space-y-1">
+              <li>Play/Pause to start or pause reading the current chapter; choose the starting verse from the small counter button.</li>
+              <li><span className="font-medium">Read for</span> lets you set a timer (presets or custom minutes). A small countdown appears in the button while reading.</li>
+              <li>Optionally set a <span className="font-medium">stop‑at</span> book/chapter. It’s inclusive: the app finishes that chapter and then stops.</li>
+              <li>Reading stops at whichever comes first: the timer or the inclusive stop‑at. Clear both with the split Clear button next to Read for.</li>
+              <li>You can pick a different voice (per language) from the Voice picker.</li>
+            </ul>
+          </div>
 
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">What this app is</h4>
-              <p className="mt-1">
-                Bible Reader & Smart Search is a focused, mobile‑style web app for reading the Bible and running fast, precise searches across versions. It supports full‑chapter reading, sticky headers, inline highlighting, and statistics‑driven filtering.
-              </p>
-            </div>
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Search results & filters</h4>
+            <ul className="mt-1 list-disc list-inside space-y-1">
+              <li>Results show matching verses. Tap any result to jump to Read at that exact place.</li>
+              <li>Open Statistics to see matches by book and chapter, then tap to focus your list.</li>
+            </ul>
+          </div>
 
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Quick start</h4>
-              <ol className="mt-1 list-decimal list-inside space-y-1">
-                <li>Pick a Bible version (defaults to Schlachter on first load).</li>
-                <li>Use Read to navigate by book/chapter. Use the ▶︎/◀︎ buttons in the header to move between chapters.</li>
-                <li>Use Search to enter a term and optionally filter to a single book or chapter.</li>
-                <li>Tap a search result to jump back to Read view at that exact verse (highlighted).</li>
-                <li>Adjust typography, layout, theme, and defaults in Settings. Your choices persist on this device.</li>
-              </ol>
-            </div>
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Appearance</h4>
+            <ul className="mt-1 list-disc list-inside space-y-1">
+              <li>Change font size, serif/sans, line height, reader width, and verse number style.</li>
+              <li>Theme: System, Light, or Dark.</li>
+            </ul>
+          </div>
 
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Modes</h4>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li><span className="font-medium">Read</span> — shows one chapter at a time with a sticky header: Version · Book Abbrev · Chapter. Verse numbers can be inline or superscript.</li>
-                <li><span className="font-medium">Search</span> — results list with a sticky summary bar and optional Statistics & Filters (book heatmap, per‑chapter counts). Click a result to jump to Read.</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Top bar actions</h4>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li><span className="font-medium">Mode toggle</span> — switch between Read and Search.</li>
-                <li><span className="font-medium">Save (💾)</span> — visible only in Read. Saves your current Version, Book, and Chapter as the app’s defaults on this device. On reload, the app opens exactly there.</li>
-                <li><span className="font-medium">Settings</span> — opens the settings page (typography, layout, theme, Bible defaults).</li>
-                <li><span className="font-medium">Theme cycle</span> — System → Light → Dark.</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Controls overlay</h4>
-              <p className="mt-1">A unified full‑screen sheet (mobile style) for quick reading/search controls.</p>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li><span className="font-medium">Read controls</span>: Version, Book, Chapter. Apply commits changes and scrolls to top of the chapter. Reading always shows the full chapter.</li>
-                <li><span className="font-medium">Search controls</span>: Version, Query, Mode (All/Any/Phrase), Scope (Whole Bible/This Book), optional Chapter Range, Case sensitivity. The header shows a live estimate before you apply.</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Settings</h4>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li><span className="font-medium">Typography</span>: font size, serif/sans, line height (a single slider that applies to both block and continuous layouts), optional text justification.</li>
-                <li><span className="font-medium">Layout</span>: reader width 20–100%. At 100% the page is full‑bleed; the container is not centered or clamped.</li>
-                <li><span className="font-medium">Verse numbers</span>: show/hide; inline or superscript.</li>
-                <li><span className="font-medium">Behavior</span>: hover highlight for verse blocks; auto‑highlight search terms in Read.</li>
-                <li><span className="font-medium">Theme</span>: System (default), Light, Dark.</li>
-                <li><span className="font-medium">Bible defaults</span>:
-                  <ul className="list-disc list-inside ml-5 mt-1 space-y-1">
-                    <li><span className="font-medium">Default version</span> — sets the standard version on this device.</li>
-                    <li><span className="font-medium">Default book</span> — optional; when set, app opens to this book.</li>
-                    <li><span className="font-medium">Default chapter</span> — optional; when omitted, chapter 1 of the default book is used.</li>
-                    <li><span className="font-medium">None options</span> — you can clear Book or Chapter defaults. Precedence rules below.</li>
-                  </ul>
-                </li>
-                <li><span className="font-medium">Reset to defaults</span>: 100% width, 16px font, superscript verse numbers, System theme, blocks layout.</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Saving vs. Settings (unified)</h4>
-              <p className="mt-1">The Save button and Settings now write the same persistent defaults:</p>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li><code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">br_version</code> — your chosen version.</li>
-                <li><code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">br_default_pos_&lt;version&gt;</code> — default bookIdx and chapterIdx.</li>
-                <li><code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">br_pos_&lt;version&gt;</code> — last reading position (kept in sync).</li>
-              </ul>
-              <p className="mt-2">On load, the app opens using this precedence:</p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Default position (from Settings or Save)</li>
-                <li>Last reading position</li>
-                <li>Genesis 1</li>
-              </ol>
-              <p className="mt-2">If Default book is set but Default chapter is None, chapter 1 is used.</p>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Version loading strategy</h4>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li>Versions index: <code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">public/bibles/index.json</code>.</li>
-                <li>Startup order: stored version → priority (Schlachter, then KJV) → others.</li>
-                <li>Prevents background prefetch from overriding a successfully loaded selection.</li>
-                <li>Whole‑Bible JSON is preferred; a sample fallback is bundled if no file loads.</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Search logic</h4>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li>Modes: <span className="font-medium">All</span> (every word must appear), <span className="font-medium">Any</span> (at least one), <span className="font-medium">Phrase</span> (exact, punctuation‑insensitive).</li>
-                <li>Case sensitive option.</li>
-                <li>Punctuation stripping for queries; word‑boundary‑aware matching across Latin, Greek, Hebrew, Cyrillic and more.</li>
-                <li>Result cap: 5,000 matching verses. When exceeded, refine your query/scope.</li>
-                <li>Statistics heatmap: tap a book to select; tap chapters to refine; the summary bar updates counts accordingly.</li>
-                <li>Preflight estimate shows approximate match totals before you apply your search.</li>
-                <li>Inline highlighting shows each match; clicking a result jumps to Read and scrolls to that verse.</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Reading experience</h4>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li>Layouts: <span className="font-medium">Verses as blocks</span> or <span className="font-medium">Continuous text</span>. Continuous uses single‑space separators between verses and removes vertical gaps; line height controls spacing.</li>
-                <li>Sticky header shows Version name, book abbreviation, and chapter with the current visible verse range.</li>
-                <li>Arrows in the header quickly navigate chapters; Apply in controls scrolls to top.</li>
-                <li>From Search, jumping to Read highlights the target verse and auto‑scrolls it under the header.</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Persistence keys</h4>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li><code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">br_theme</code> — “system” | “light” | “dark”.</li>
-                <li><code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">br_reader_settings</code> — font, line height, width, layout, numbers, behavior.</li>
-                <li><code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">br_version</code> — selected version.</li>
-                <li><code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">br_default_pos_&lt;version&gt;</code> — default bookIdx and optional chapterIdx.</li>
-                <li><code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">br_pos_&lt;version&gt;</code> — last reading position (bookIdx, chapterIdx, verse range).</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Troubleshooting</h4>
-              <ul className="mt-1 list-disc list-inside space-y-1">
-                <li>If a version doesn’t load, ensure its JSON is under <code className="px-1 rounded bg-slate-800/10 dark:bg-slate-200/10">public/bibles/&lt;abbr&gt;.json</code> and that it uses the <code>books[].chapters[][]</code> structure.</li>
-                <li>If defaults don’t seem to apply, check localStorage keys listed above and reload the page.</li>
-                <li>If the result count is “Too many,” narrow your terms or limit scope to a book/chapter.</li>
-              </ul>
-            </div>
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Install</h4>
+            <ul className="mt-1 list-disc list-inside space-y-1">
+              <li>Use the Install button (if offered) to add the app to your home screen for a full‑screen experience.</li>
+            </ul>
           </div>
         </div>
       </div>
