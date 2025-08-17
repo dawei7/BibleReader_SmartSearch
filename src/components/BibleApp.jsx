@@ -67,6 +67,20 @@ const Icon = {
       <path d="M12 7v5l3 3" />
     </svg>
   ),
+  Reset: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      {/* Refresh/Reset: turn arrow */}
+      <path d="M4 10a8 8 0 1 1-1.9 5.1"/>
+      <path d="M4 4v6h6"/>
+    </svg>
+  ),
+  Clear: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      {/* Backspace/Clear key with X */}
+      <path d="M20 7H9l-5 5 5 5h11a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+      <path d="M12 10l4 4m0-4l-4 4" />
+    </svg>
+  ),
 };
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, Cell } from 'recharts';
@@ -251,8 +265,44 @@ export default function BibleApp(){
   const ttsAdvancingRef = useRef(false);
   // Sleep timer and stop-at target (declared early to avoid TDZ in hooks below)
   const [showSleepTimer,setShowSleepTimer] = useState(false);
-  const [sleepMinutes,setSleepMinutes] = useState(0); // 0 = off
+  const [readForMinutes,setReadForMinutes] = useState(0); // 0 = off
   const sleepDeadlineRef = useRef(0);
+  const readForMinutesRef = useRef(0);
+  useEffect(()=>{ readForMinutesRef.current = readForMinutes||0; },[readForMinutes]);
+  // Countdown ticker (for UI countdown while reading)
+  const [nowMs, setNowMs] = useState(()=> Date.now());
+  // Secondary overlay to pick a preset duration
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
+  // Close duration picker on Escape
+  useEffect(()=>{
+    if(!(mode==='read' && showSleepTimer && showDurationPicker)) return;
+    const onKey = (e)=>{ if(e.key==='Escape'){ setShowDurationPicker(false); } };
+    window.addEventListener('keydown', onKey);
+    return ()=> window.removeEventListener('keydown', onKey);
+  },[mode, showSleepTimer, showDurationPicker]);
+  // Preset durations and formatter for display
+  const presetMinutes = useMemo(()=>[
+    1,5,10,15,20,25,30,45,60,75,90,120,180,240,300,360,420,480,540,600
+  ],[]);
+  const formatMinutes = useCallback((m)=>{
+    if(!m || m<=0) return '—';
+    const h = Math.floor(m/60), min = m%60;
+    if(h>0 && min>0) return `${h}h ${min}m`;
+    if(h>0) return `${h}h`;
+    return `${min}m`;
+  },[]);
+  const formatCountdown = useCallback((ms)=>{
+    if(!ms || ms<=0) return '0:00';
+    const total = Math.ceil(ms/1000);
+    const s = total % 60;
+    const m = Math.floor(total/60);
+    if(m >= 60){
+      const h = Math.floor(m/60);
+      const mm = String(m % 60).padStart(2,'0');
+      return `${h}:${mm}`;
+    }
+    return `${m}:${String(s).padStart(2,'0')}`;
+  },[]);
   const [stopAtBookIdx,setStopAtBookIdx] = useState(null); // null = none
   const [stopAtChapterIdx,setStopAtChapterIdx] = useState(null);
   // Scroll position preservation for each mode
@@ -637,6 +687,20 @@ export default function BibleApp(){
     const s = { readerFontSize, readerFontFamily, lineHeightPx, readerWidthPct, verseLayout, showNumbers, numberStyle, justifyText, hoverHighlight, autoHighlightInRead };
     try { localStorage.setItem('br_reader_settings', JSON.stringify(s)); } catch {}
   },[readerFontSize, readerFontFamily, lineHeightPx, readerWidthPct, verseLayout, showNumbers, numberStyle, justifyText, hoverHighlight, autoHighlightInRead]);
+  // Load and persist TTS rate/pitch
+  useEffect(()=>{
+    try {
+      const raw = localStorage.getItem('br_tts_settings');
+      if(raw){
+        const s = JSON.parse(raw);
+        if(typeof s.rate==='number') setTtsRate(clamp(s.rate, 0.50, 2.00));
+        if(typeof s.pitch==='number') setTtsPitch(clamp(s.pitch, 0.25, 2.00));
+      }
+    } catch { /* ignore */ }
+  },[]);
+  useEffect(()=>{
+    try { localStorage.setItem('br_tts_settings', JSON.stringify({ rate: ttsRate, pitch: ttsPitch })); } catch {}
+  },[ttsRate, ttsPitch]);
   // Auto-highlight search terms in Read mode if enabled
   useEffect(()=>{
     if(autoHighlightInRead && mode==='read'){
@@ -820,24 +884,46 @@ export default function BibleApp(){
       if(hasMoreBooks){ ttsAdvancingRef.current = true; setBookIdx(bookIdx+1); setChapterIdx(0); setVStart(1); setVEnd(0); return true; }
       return false;
     }
+    // At verse boundary, check timer immediately; then continue or stop/advance as needed
     utter.onend = ()=>{
       if(ttsRunIdRef.current !== myRun) return;
       if(ttsStoppedRef.current) return;
-      // Stop conditions: sleep timer or stop-at target
-      if(shouldStopByTimer() || shouldStopByTarget()){ stopTTS(); return; }
       const next = (ttsIndexRef.current|0)+1;
-      if(next<readVerses.length){ speakIndex(next); }
-      else {
-        // End of chapter slice: auto-advance chapter/book; continuation handled by effect
+      // Stop by timer after each verse
+      if(shouldStopByTimer()){
+        stopTTS();
+        return;
+      }
+      if(next < readVerses.length){
+        // Continue within the same chapter (ignore stop/timer until chapter end)
+        speakIndex(next);
+      } else {
+        // End of chapter: check stop conditions (timer or stop-at target)
+        if(shouldStopByTarget() || shouldStopByTimer()){
+          stopTTS();
+          return;
+        }
+        // Otherwise, advance to the next chapter/book
         const advanced = tryAdvanceChapter();
         if(!advanced){ stopTTS(); }
       }
     };
     utter.onerror = ()=>{
-      if(ttsRunIdRef.current !== myRun) return; if(ttsStoppedRef.current) return;
-      if(shouldStopByTimer() || shouldStopByTarget()){ stopTTS(); return; }
-      const next=(ttsIndexRef.current|0)+1;
-      if(next<readVerses.length){ speakIndex(next); } else {
+      if(ttsRunIdRef.current !== myRun) return;
+      if(ttsStoppedRef.current) return;
+      const next = (ttsIndexRef.current|0)+1;
+      // Stop by timer after each verse
+      if(shouldStopByTimer()){
+        stopTTS();
+        return;
+      }
+      if(next < readVerses.length){
+        speakIndex(next);
+      } else {
+        if(shouldStopByTarget() || shouldStopByTimer()){
+          stopTTS();
+          return;
+        }
         const advanced = tryAdvanceChapter();
         if(!advanced){ stopTTS(); }
       }
@@ -860,13 +946,16 @@ export default function BibleApp(){
   // Fresh language => refresh voice selection; do not force voice if not matching
   ttsVoiceRef.current = pickVoiceFor(versionLangCode) || null;
   // Arm sleep timer deadline if configured
-  if(sleepMinutes>0){ sleepDeadlineRef.current = Date.now() + Math.max(1, Math.floor(sleepMinutes*60*1000)); } else { sleepDeadlineRef.current = 0; }
+  {
+  const mins = readForMinutesRef.current|0;
+    if(mins>0){ sleepDeadlineRef.current = Date.now() + Math.max(1, Math.floor(mins*60*1000)); } else { sleepDeadlineRef.current = 0; }
+  }
   setTtsStatus('playing');
     // Start at provided index, else remembered last verse, else 0
     let startIndex = (typeof from === 'number' ? from : ttsLastIndexRef.current|0);
     if(!(startIndex>=0 && startIndex<readVerses.length)) startIndex = 0;
     speakIndex(clamp(startIndex,0,readVerses.length-1));
-  },[ttsSupported,readVerses,versionLangCode,speakIndex,sleepMinutes]);
+  },[ttsSupported,readVerses,versionLangCode,speakIndex,readForMinutes]);
 
   // When version language changes, clear cached voice to force a re-pick next time
   useEffect(()=>{
@@ -880,6 +969,22 @@ export default function BibleApp(){
 
   const pauseTTS = useCallback(()=>{ if(!ttsSupported) return; try { window.speechSynthesis.pause(); } catch {} setTtsStatus('paused'); },[ttsSupported]);
   const resumeTTS = useCallback(()=>{ if(!ttsSupported) return; try { window.speechSynthesis.resume?.(); } catch {} setTtsStatus('playing'); },[ttsSupported]);
+
+  // Re-arm the sleep deadline if user changes minutes while playing
+  useEffect(()=>{
+    if(ttsStatus==='playing'){
+    const mins = readForMinutesRef.current|0;
+      sleepDeadlineRef.current = mins>0 ? (Date.now() + Math.max(1, Math.floor(mins*60*1000))) : 0;
+    }
+  },[readForMinutes, ttsStatus]);
+
+  // Drive countdown UI while playing (does not change the deadline itself)
+  useEffect(()=>{
+    if(ttsStatus !== 'playing' || sleepDeadlineRef.current <= 0) return;
+    setNowMs(Date.now());
+    const id = setInterval(()=> setNowMs(Date.now()), 1000);
+    return ()=> clearInterval(id);
+  },[ttsStatus, readForMinutes]);
 
   // Stop TTS when leaving read mode
   useEffect(()=>{ if(mode!=='read'){ stopTTS(); } },[mode,stopTTS]);
@@ -970,29 +1075,16 @@ export default function BibleApp(){
   const [headerHeight,setHeaderHeight]=useState(72); // may be used for future spacing
   const [bottomBarH,setBottomBarH]=useState(52);
   const caseSensitiveRef = useRef(null);
+  // Language labels for Voice picker
+  const LANG_LABELS = {
+    en:'English', de:'German', zh:'Chinese', es:'Spanish', pt:'Portuguese', fr:'French', ru:'Russian', ro:'Romanian', vi:'Vietnamese', el:'Greek', ko:'Korean', fi:'Finnish', eo:'Esperanto', ar:'Arabic'
+  };
   // Stats overlay scrollers (top mirror and main content)
   const statsTopScrollRef = useRef(null);
   const statsMainScrollRef = useRef(null);
-  // Verse picker overlay
   const [showVersePicker, setShowVersePicker] = useState(false);
   // Voice picker overlay
   const [showVoicePicker, setShowVoicePicker] = useState(false);
-
-  // Map language codes to readable labels (basic set based on bundled versions)
-  const LANG_LABELS = useMemo(()=>({
-    en:'English', de:'German', zh:'Chinese', es:'Spanish', pt:'Portuguese', fr:'French', ru:'Russian', ro:'Romanian', vi:'Vietnamese', el:'Greek', ko:'Korean', fi:'Finnish', eo:'Esperanto', ar:'Arabic'
-  }),[]);
-  const versionLangCodes = useMemo(()=>{
-    try {
-      const s = new Set();
-      (versions||[]).forEach(v=>{ const code=((v.abbreviation||'').split('_')[0]||'').toLowerCase(); if(code) s.add(code); });
-      // If empty (not loaded yet), infer from available voices
-      if(!s.size && (voicesRef.current||[]).length){
-        (voicesRef.current||[]).forEach(vc=>{ const code = (vc.lang||'').slice(0,2).toLowerCase(); if(code) s.add(code); });
-      }
-      return Array.from(s).sort();
-    } catch { return []; }
-  },[versions, voicesTick]);
 
   // measure header + panel sizes for dynamic spacing on mobile
   // Simplified: only track header height (static) for potential future offset
@@ -1007,11 +1099,10 @@ export default function BibleApp(){
     return ()=> window.removeEventListener('resize', measure);
   },[headerHeight, bookIdx, chapterIdx, mode]);
   // Preserve scroll position per mode
-  const modeRef = useRef(mode);
   const prevModeRef = useRef(mode);
   useEffect(()=>{
-    prevModeRef.current = modeRef.current;
-    modeRef.current = mode;
+    const prev = prevModeRef.current;
+    prevModeRef.current = mode;
         
     // Only restore position if we're switching modes via UI (not jumpTo)
     // jumpTo will handle its own scrolling via pendingScrollVerse
@@ -1447,7 +1538,7 @@ export default function BibleApp(){
   return (
   <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-white via-slate-50 to-zinc-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors">
   <header ref={headerRef} className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm border-b border-slate-200 dark:border-slate-700">
-  <div className="w-full px-4 py-3 flex items-center justify-between">
+  <div className="w-full px-4 py-3 flex items-center">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -1458,8 +1549,6 @@ export default function BibleApp(){
             >
               ΑΩ
             </button>
-          </div>
-          <div className="flex items-center gap-3">
             <nav className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
         {['read','search'].map(t => (
                 <button
@@ -1485,7 +1574,9 @@ export default function BibleApp(){
                 </button>
               ))}
             </nav>
-            {/* Install icon will be placed after Settings */}
+          </div>
+          {/* Right-aligned action icons */}
+          <div className="ml-auto flex items-center gap-2">
             {mode==='read' && (
               <button
                 onClick={saveCurrentPosition}
@@ -1503,9 +1594,9 @@ export default function BibleApp(){
             >
               <Icon.Settings className="h-4 w-4"/>
             </button>
-      {canInstall && (
+            {canInstall && (
               <button
-        onClick={()=> setShowInstallConfirm(true)}
+                onClick={()=> setShowInstallConfirm(true)}
                 aria-label="Install app"
                 title="Install on this device"
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 text-sm transition-colors"
@@ -1513,8 +1604,6 @@ export default function BibleApp(){
                 <Icon.Install className="h-4 w-4"/>
               </button>
             )}
-            {/* Mobile controls toggle now in bottom tab bar */}
-            {/* Theme selection removed from navbar; adjust theme in Settings */}
           </div>
         </div>
       </header>
@@ -2026,7 +2115,7 @@ export default function BibleApp(){
 
   <section className="space-y-0 mt-0 pt-[0px]">
         {/* Read Pane */}
-  <div ref={readPaneRef} hidden={mode!=='read'} style={{ height: `calc(100vh - ${headerHeight}px)`, overflowY: 'auto', paddingBottom: bottomBarH }} className="">
+  <div ref={readPaneRef} hidden={mode!=='read'} style={{ height: `calc(100vh - ${headerHeight}px)`, overflowY: 'auto', paddingBottom: bottomBarH }} className="bg-white dark:bg-slate-900">
           {/* Sticky chapter header stays fixed at the top of the scrollable pane */}
           <div ref={readStickyRef} className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700">
             <div className="px-4 py-2 flex items-center justify-between gap-2">
@@ -2036,7 +2125,7 @@ export default function BibleApp(){
                 onClick={()=> setShowControls(true)}
                 title="Open reading controls"
                 aria-haspopup="dialog"
-                className="text-left text-sm text-slate-600 dark:text-slate-400 min-w-0 hover:bg-slate-100 hover:dark:bg-slate-800/60 rounded-lg px-2 py-1 transition-colors"
+                className="text-left text-sm text-slate-600 dark:text-slate-400 min-w-0 rounded-lg px-2 py-1 transition-colors cursor-pointer ring-1 ring-indigo-400/30 bg-indigo-50/40 dark:bg-indigo-900/20 hover:bg-indigo-100/60 hover:dark:bg-indigo-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
               >
                 <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">{activeVersionName}</span>
                 <span className="mx-2 text-slate-400">·</span>
@@ -2064,7 +2153,7 @@ export default function BibleApp(){
             initial={{opacity:0,y:8}}
             animate={{opacity:1,y:0}}
             transition={{duration:.25}}
-            className="bg-white dark:bg-slate-900 p-4 shadow-sm scroll-mt-[72px] transition-colors"
+            className="bg-white dark:bg-slate-900 p-4 scroll-mt-[72px] transition-colors"
             style={{
               width: `${readerWidthPct}%`,
               // When 100%, allow full-bleed width (no centering, no max clamp)
@@ -2157,7 +2246,7 @@ export default function BibleApp(){
             onClick={()=> setShowControls(true)}
             title="Open search controls"
             aria-haspopup="dialog"
-            className="min-w-0 text-left text-[13px] text-slate-600 dark:text-slate-400 truncate hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-lg px-2 py-1 transition-colors"
+            className="min-w-0 text-left text-[13px] text-slate-600 dark:text-slate-400 truncate rounded-lg px-2 py-1 transition-colors cursor-pointer ring-1 ring-indigo-400/30 bg-indigo-50/40 dark:bg-indigo-900/20 hover:bg-indigo-100/60 hover:dark:bg-indigo-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
           >
             <span className="font-semibold text-slate-900 dark:text-slate-100">Search Results</span>{' '}
             {query ? (
@@ -2294,17 +2383,52 @@ export default function BibleApp(){
               </button>
             </div>
             )}
-            {/* Sleep timer button (read mode only) */}
+      {/* Read for (timer) button (read mode only) */}
             {mode==='read' && (
-              <button
-                className={classNames('rounded-lg px-3 py-2 border text-sm inline-flex items-center gap-2', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}
-                onClick={()=> setShowSleepTimer(true)}
-                title="Set sleep timer or stop-at chapter"
-                aria-haspopup="dialog"
-              >
-                <Icon.Clock className="h-5 w-5"/>
-                <span className="sr-only">Sleep timer</span>
-              </button>
+              <div className="inline-flex items-center gap-2">
+                <div className="inline-flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600">
+                <button
+                  className={classNames('px-3 py-2 text-sm inline-flex items-center gap-2 focus:outline-none', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80')}
+                  onClick={()=> setShowSleepTimer(true)}
+                  title="Read for (choose minutes) or set stop-at (inclusive) chapter"
+                  aria-haspopup="dialog"
+                >
+                  <Icon.Clock className="h-5 w-5"/>
+                  <span className="font-medium">Read for</span>
+                  <span className="tabular-nums">{formatMinutes(readForMinutes)}</span>
+                  {ttsStatus==='playing' && sleepDeadlineRef.current>0 && (
+                    (()=>{
+                      const remaining = Math.max(0, sleepDeadlineRef.current - nowMs);
+                      const warn = remaining < 30000; // < 30s
+                      return (
+                        <span
+                          className={classNames(
+                            'ml-2 text-[11px] px-1.5 py-0.5 rounded tabular-nums',
+                            warn
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
+                              : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200'
+                          )}
+                          title="Time remaining"
+                        >
+                          {formatCountdown(remaining)}
+                        </span>
+                      );
+                    })()
+                  )}
+                </button>
+                <button
+                  className={classNames('px-2.5 py-2 text-sm border-l focus:outline-none inline-flex items-center justify-center leading-none', 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80')}
+                  onClick={()=> { setReadForMinutes(0); setStopAtBookIdx(null); setStopAtChapterIdx(null); sleepDeadlineRef.current = 0; }}
+                  title="Clear timer and stop-at"
+                  aria-label="Clear timer and stop-at"
+                >
+                  <Icon.Clear className="h-5 w-5 block" />
+                </button>
+                </div>
+                {false && ttsStatus==='playing' && sleepDeadlineRef.current>0 && (
+                  <span className="sr-only">{formatCountdown(Math.max(0, sleepDeadlineRef.current - nowMs))}</span>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -2590,25 +2714,50 @@ export default function BibleApp(){
       </div>
     )}
 
-    {/* Sleep Timer overlay */}
+    {/* Read for (Sleep Timer) overlay */}
   {mode==='read' && showSleepTimer && (
       <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col">
         <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Sleep timer</div>
+            <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Read for</div>
             <button onClick={()=> setShowSleepTimer(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Close</button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm text-slate-700 dark:text-slate-300">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Read for (minutes):</label>
-            <input type="number" min="0" max="600" step="1" value={sleepMinutes}
-              onChange={e=> setSleepMinutes(Math.max(0, Math.min(600, parseInt(e.target.value||'0',10))))}
-              className="w-28 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">0 disables the timer.</div>
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">Pick a duration</div>
+            <button
+              type="button"
+              onClick={()=> setShowDurationPicker(true)}
+              aria-haspopup="dialog"
+              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80"
+              title="Choose from presets"
+            >
+              <span className="font-medium">Duration</span>
+              <span className="tabular-nums">{readForMinutes>0 ? formatMinutes(readForMinutes) : 'Off'}</span>
+              <span aria-hidden>▾</span>
+            </button>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">Choose a preset, or enter a custom value below.</div>
+            <div className="mt-2 flex items-center gap-3 flex-wrap">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Custom minutes</label>
+              <input
+                type="number"
+                min="0"
+                max="600"
+                step="1"
+                value={readForMinutes}
+                onChange={e=> {
+                  const v = Math.max(0, Math.min(600, parseInt(e.target.value||'0',10)));
+                  setReadForMinutes(Number.isFinite(v)? v: 0);
+                }}
+                className="w-28 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
+              />
+              <div className="text-xs text-slate-500 dark:text-slate-400">= <span className="tabular-nums">{formatMinutes(readForMinutes)}</span></div>
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">0 disables the timer.</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">Optional stop at book/chapter</div>
+            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">Optional stop at book/chapter <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">(inclusive)</span></div>
             <div className="flex items-center gap-2">
               <select value={stopAtBookIdx==null? '' : String(stopAtBookIdx)} onChange={e=>{
                 const v = e.target.value; if(v===''){ setStopAtBookIdx(null); setStopAtChapterIdx(null); }
@@ -2626,10 +2775,54 @@ export default function BibleApp(){
                 {stopAtBookIdx!=null && (bible?.[stopAtBookIdx]?.chapters||[]).map((_,i)=> <option key={i} value={i+1}>{i+1}</option>)}
               </select>
             </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400">Whichever comes first (time or stop-at) will stop reading.</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">Whichever comes first (time or stop-at) will stop reading. Stop-at is inclusive (finishes the selected chapter before stopping).</div>
           </div>
           <div className="pt-2">
             <button onClick={()=> setShowSleepTimer(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Done</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Duration Presets overlay */}
+    {mode==='read' && showSleepTimer && showDurationPicker && (
+      <div role="dialog" aria-modal="true" className="fixed inset-0 z-[70] bg-white dark:bg-slate-900 flex flex-col">
+        <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Choose duration</div>
+            <button onClick={()=> setShowDurationPicker(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <button
+              onClick={()=>{ setReadForMinutes(0); setShowDurationPicker(false); }}
+              className={classNames(
+                'px-2 py-2 rounded-lg border text-xs text-center transition-colors',
+                (readForMinutes|0)===0 ? 'bg-indigo-600 border-indigo-600 text-white shadow' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+              )}
+            >
+              <div className="font-semibold">Off</div>
+            </button>
+            {presetMinutes.map((m)=>{
+              const selected = (readForMinutes|0) === m;
+              return (
+                <button
+                  key={m}
+                  onClick={()=>{ setReadForMinutes(m); setShowDurationPicker(false); }}
+                  className={classNames(
+                    'px-2 py-2 rounded-lg border text-xs text-center transition-colors',
+                    selected
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow'
+                      : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                  )}
+                  aria-pressed={selected}
+                  aria-label={`Set ${formatMinutes(m)}`}
+                >
+                  <div className="font-semibold tabular-nums">{formatMinutes(m)}</div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
