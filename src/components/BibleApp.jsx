@@ -2030,12 +2030,19 @@ export default function BibleApp(){
           {/* Sticky chapter header stays fixed at the top of the scrollable pane */}
           <div ref={readStickyRef} className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700">
             <div className="px-4 py-2 flex items-center justify-between gap-2">
-              <div className="text-sm text-slate-600 dark:text-slate-400 min-w-0">
+              {/* Clickable label opens the Controls overlay in Read mode */}
+              <button
+                type="button"
+                onClick={()=> setShowControls(true)}
+                title="Open reading controls"
+                aria-haspopup="dialog"
+                className="text-left text-sm text-slate-600 dark:text-slate-400 min-w-0 hover:bg-slate-100 hover:dark:bg-slate-800/60 rounded-lg px-2 py-1 transition-colors"
+              >
                 <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">{activeVersionName}</span>
                 <span className="mx-2 text-slate-400">·</span>
                 <span className="font-semibold text-slate-900 dark:text-slate-100">{currentBook? bookAbbrev(currentBook.name, currentBook.abbrev): ''}</span>
                 {" "}Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})
-              </div>
+              </button>
               <div className="flex items-center gap-2 text-xs">
                 {/* TTS controls moved to footer for mobile; keep header uncluttered */}
                 <button
@@ -2141,11 +2148,17 @@ export default function BibleApp(){
       </div>
     )}
     {/* Search Pane */}
-  <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0, paddingBottom: bottomBarH }} className="pr-0 bg-white dark:bg-slate-900">
+  <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0, paddingBottom: 0 }} className="pr-0 bg-white dark:bg-slate-900">
   {/* Statistics & Filters toggle (hidden by default) */}
   <div className="sticky top-0 left-0 right-0 z-20 mb-0 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur py-2 px-4 border-b border-slate-200 dark:border-slate-700" style={{ top: 0, left: 0, right: 0, transform: 'translateZ(0)', willChange: 'top' }}>
         <div className="w-full flex items-center justify-between gap-3">
-          <div className="min-w-0 text-[13px] text-slate-600 dark:text-slate-400 truncate">
+          <button
+            type="button"
+            onClick={()=> setShowControls(true)}
+            title="Open search controls"
+            aria-haspopup="dialog"
+            className="min-w-0 text-left text-[13px] text-slate-600 dark:text-slate-400 truncate hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-lg px-2 py-1 transition-colors"
+          >
             <span className="font-semibold text-slate-900 dark:text-slate-100">Search Results</span>{' '}
             {query ? (
               <>
@@ -2157,7 +2170,7 @@ export default function BibleApp(){
             ) : (
               <span className="text-slate-400">(enter search term)</span>
             )}
-          </div>
+          </button>
           <div className="flex items-center gap-2 shrink-0">
             {(query || queryInput) && (
               <button
@@ -2245,10 +2258,10 @@ export default function BibleApp(){
       </main>
 
     {/* Unified bottom bar (was mobile only) */}
+  {mode==='read' && (
   <div ref={bottomBarRef} className={classNames('fixed inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-700 pb-[max(12px,env(safe-area-inset-bottom))] pt-2', 'bottom-0')}>
   <div className="w-full px-3 py-2 grid grid-cols-1">
           <div className="flex justify-center items-center gap-2">
-            <button aria-expanded={showControls} onClick={()=> setShowControls(v=>!v)} className={classNames('rounded-lg px-4 py-2 border text-sm', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600', showControls && 'ring-1 ring-slate-400/50 dark:ring-slate-500/50')}>Controls</button>
             {/* Split button: Play/Stop + Verse chooser (read mode only) */}
             {mode==='read' && (
             <div className="inline-flex rounded-xl overflow-hidden border border-indigo-500 dark:border-indigo-500 shadow-sm">
@@ -2295,7 +2308,8 @@ export default function BibleApp(){
             )}
           </div>
         </div>
-      </div>
+    </div>
+  )}
 
   {/* Unified full-screen controls overlay */}
   {(true) && (
