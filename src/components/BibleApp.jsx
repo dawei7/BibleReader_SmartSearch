@@ -61,6 +61,12 @@ const Icon = {
       <rect x="6" y="6" width="12" height="12" rx="2" />
     </svg>
   ),
+  Clock: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  ),
 };
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, Cell } from 'recharts';
@@ -241,6 +247,14 @@ export default function BibleApp(){
   // Remember the last verse index across stops (reset on version/book/chapter change)
   const ttsLastIndexRef = useRef(0);
   const [ttsLastVisibleIndex, setTtsLastVisibleIndex] = useState(0);
+  // Suppress stop while auto-advancing to next chapter/book
+  const ttsAdvancingRef = useRef(false);
+  // Sleep timer and stop-at target (declared early to avoid TDZ in hooks below)
+  const [showSleepTimer,setShowSleepTimer] = useState(false);
+  const [sleepMinutes,setSleepMinutes] = useState(0); // 0 = off
+  const sleepDeadlineRef = useRef(0);
+  const [stopAtBookIdx,setStopAtBookIdx] = useState(null); // null = none
+  const [stopAtChapterIdx,setStopAtChapterIdx] = useState(null);
   // Scroll position preservation for each mode
   const [readScrollY,setReadScrollY]=useState(0);
   const [searchScrollY,setSearchScrollY]=useState(0);
@@ -688,6 +702,40 @@ export default function BibleApp(){
   // Close About overlay on Escape
   useEffect(()=>{ if(!showAbout) return; const onKey=(e)=>{ if(e.key==='Escape') setShowAbout(false); }; window.addEventListener('keydown',onKey); return ()=> window.removeEventListener('keydown',onKey); },[showAbout]);
   const currentBook = bible?.[bookIdx]; const chapterCount=currentBook?.chapters.length || 0; const verseCount=currentBook?.chapters[chapterIdx]?.length || 0; const vEndEffective = vEnd===0? verseCount : clamp(vEnd,1,verseCount); const vStartEffective = clamp(vStart,1,vEndEffective); const searchObj = useMemo(()=> buildSearchRegex(query,searchMode,{caseSensitive}),[query,searchMode,caseSensitive]);
+  // Cross-book navigation helpers for header arrows
+  const hasPrevChapterOverall = !!bible && (bookIdx>0 || chapterIdx>0);
+  const hasNextChapterOverall = !!bible && (bookIdx < ((bible?.length||0)-1) || chapterIdx < (chapterCount-1));
+  const goPrevChapter = useCallback(()=>{
+    if(!bible) return;
+    if(chapterIdx>0){
+      setChapterIdx(c=> Math.max(0, (c|0)-1));
+    } else if(bookIdx>0){
+      const prevB = (bookIdx|0)-1;
+      const lastCh = Math.max(0, ((bible?.[prevB]?.chapters?.length||1)-1));
+      setBookIdx(prevB);
+      setChapterIdx(lastCh);
+    } else {
+      return; // already at first book/chapter
+    }
+    // Always show full chapter after jump
+    setVStart(1); setVEnd(0);
+    setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+  },[bible, bookIdx, chapterIdx]);
+  const goNextChapter = useCallback(()=>{
+    if(!bible) return;
+    const thisBook = bible?.[bookIdx];
+    const lastIdx = Math.max(0, (thisBook?.chapters?.length||1)-1);
+    if(chapterIdx < lastIdx){
+      setChapterIdx(c=> Math.min(lastIdx, (c|0)+1));
+    } else if(bookIdx < ((bible?.length||0)-1)){
+      setBookIdx(b=> (b|0)+1);
+      setChapterIdx(0);
+    } else {
+      return; // already at last book/chapter
+    }
+    setVStart(1); setVEnd(0);
+    setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+  },[bible, bookIdx, chapterIdx]);
 
   // Persist reading position per version whenever it changes
   useEffect(()=>{
@@ -756,14 +804,44 @@ export default function BibleApp(){
     if(preferred && (((preferred.lang||'').toLowerCase().startsWith((versionLangCode||'').toLowerCase())) || (/zh/i.test(versionLangCode) && /(Chinese|Mandarin|Cantonese|zh|Han)/i.test(preferred.name||'')))){
       utter.voice = preferred;
     }
+    function shouldStopByTimer(){ return sleepDeadlineRef.current>0 && Date.now() >= sleepDeadlineRef.current; }
+    function shouldStopByTarget(){
+      if(stopAtBookIdx==null || stopAtChapterIdx==null) return false;
+      // Stop when current position reaches or passes the target end-of-chapter
+      return (bookIdx > stopAtBookIdx) || (bookIdx===stopAtBookIdx && chapterIdx >= stopAtChapterIdx);
+    }
+    function tryAdvanceChapter(){
+      if(!bible) return false;
+      const b = bible[bookIdx]; if(!b) return false;
+      const hasMoreCh = (chapterIdx+1) < (b.chapters?.length||0);
+      if(hasMoreCh){ ttsAdvancingRef.current = true; setChapterIdx(chapterIdx+1); setVStart(1); setVEnd(0); return true; }
+      // move to next book
+      const hasMoreBooks = (bookIdx+1) < (bible?.length||0);
+      if(hasMoreBooks){ ttsAdvancingRef.current = true; setBookIdx(bookIdx+1); setChapterIdx(0); setVStart(1); setVEnd(0); return true; }
+      return false;
+    }
     utter.onend = ()=>{
       if(ttsRunIdRef.current !== myRun) return;
       if(ttsStoppedRef.current) return;
+      // Stop conditions: sleep timer or stop-at target
+      if(shouldStopByTimer() || shouldStopByTarget()){ stopTTS(); return; }
       const next = (ttsIndexRef.current|0)+1;
       if(next<readVerses.length){ speakIndex(next); }
-      else { stopTTS(); }
+      else {
+        // End of chapter slice: auto-advance chapter/book; continuation handled by effect
+        const advanced = tryAdvanceChapter();
+        if(!advanced){ stopTTS(); }
+      }
     };
-    utter.onerror = ()=>{ if(ttsRunIdRef.current !== myRun) return; if(ttsStoppedRef.current) return; const next=(ttsIndexRef.current|0)+1; if(next<readVerses.length){ speakIndex(next); } else { stopTTS(); } };
+    utter.onerror = ()=>{
+      if(ttsRunIdRef.current !== myRun) return; if(ttsStoppedRef.current) return;
+      if(shouldStopByTimer() || shouldStopByTarget()){ stopTTS(); return; }
+      const next=(ttsIndexRef.current|0)+1;
+      if(next<readVerses.length){ speakIndex(next); } else {
+        const advanced = tryAdvanceChapter();
+        if(!advanced){ stopTTS(); }
+      }
+    };
     currentUtterRef.current = utter;
     try {
       if(!ttsStoppedRef.current){
@@ -771,7 +849,7 @@ export default function BibleApp(){
         window.speechSynthesis.speak(utter);
       }
     } catch {}
-  },[ttsSupported,readVerses,ttsRate,ttsPitch,versionLangCode,stopTTS,bookIdx,chapterIdx,voicePrefMap]);
+  },[ttsSupported,readVerses,ttsRate,ttsPitch,versionLangCode,stopTTS,bookIdx,chapterIdx,voicePrefMap,bible]);
 
   const startTTS = useCallback((from)=>{
     if(!ttsSupported || !readVerses.length) return;
@@ -781,12 +859,14 @@ export default function BibleApp(){
   currentUtterRef.current = null;
   // Fresh language => refresh voice selection; do not force voice if not matching
   ttsVoiceRef.current = pickVoiceFor(versionLangCode) || null;
-    setTtsStatus('playing');
+  // Arm sleep timer deadline if configured
+  if(sleepMinutes>0){ sleepDeadlineRef.current = Date.now() + Math.max(1, Math.floor(sleepMinutes*60*1000)); } else { sleepDeadlineRef.current = 0; }
+  setTtsStatus('playing');
     // Start at provided index, else remembered last verse, else 0
     let startIndex = (typeof from === 'number' ? from : ttsLastIndexRef.current|0);
     if(!(startIndex>=0 && startIndex<readVerses.length)) startIndex = 0;
     speakIndex(clamp(startIndex,0,readVerses.length-1));
-  },[ttsSupported,readVerses,versionLangCode,speakIndex]);
+  },[ttsSupported,readVerses,versionLangCode,speakIndex,sleepMinutes]);
 
   // When version language changes, clear cached voice to force a re-pick next time
   useEffect(()=>{
@@ -803,12 +883,32 @@ export default function BibleApp(){
 
   // Stop TTS when leaving read mode
   useEffect(()=>{ if(mode!=='read'){ stopTTS(); } },[mode,stopTTS]);
-  // Stop and reset remembered verse when position or verse range changes
+  // Stop and reset remembered verse when position or verse range changes,
+  // except when we are auto-advancing during continuous TTS.
   useEffect(()=>{
+    if(ttsAdvancingRef.current){
+      // Defer continuation to a separate effect when verses are ready
+      return;
+    }
     stopTTS();
     ttsLastIndexRef.current = 0;
     setTtsLastVisibleIndex(0);
   },[bookIdx,chapterIdx,vStart,vEnd,stopTTS]);
+
+  // After auto-advance, when the new chapter/book is set and verses are computed,
+  // continue reading from the first verse without resetting the runId/session.
+  useEffect(()=>{
+    if(!ttsAdvancingRef.current) return;
+    if(!ttsSupported) { ttsAdvancingRef.current = false; return; }
+    if(!readVerses.length) return; // wait until verses are ready
+    const myRun = ttsRunIdRef.current;
+    // Reset remembered index for the new chapter and continue
+    ttsLastIndexRef.current = 0; setTtsLastVisibleIndex(0);
+    ttsIndexRef.current = -1; setTtsActiveIndex(-1);
+    ttsAdvancingRef.current = false;
+    // Kick the next verse in the same run
+    speakIndex(0);
+  },[readVerses.length, ttsSupported, speakIndex]);
   const searchResults = useMemo(()=>{ if(!bible || !searchObj) return { rows:[], totalMatches:0, perBook:{}, perChap:{}, exceeded:false }; const targetBooks = searchScope==='book'? [bible[bookIdx]].filter(Boolean) : bible; if(!targetBooks.length) return { rows:[], totalMatches:0, perBook:{}, perChap:{}, exceeded:false }; const rows=[]; const perBook={}; const perChap={}; let total=0; let exceeded=false; outer: for(const b of targetBooks){ let cStart=0, cEnd=b.chapters.length-1; if(searchScope==='book'){ const totalCh=b.chapters.length; const startClamped=Math.max(1,Math.min(chapFrom,totalCh)); const endRaw= chapTo===0? totalCh : Math.max(1,Math.min(chapTo,totalCh)); const endClamped=Math.max(startClamped,endRaw); cStart=startClamped-1; cEnd=endClamped-1; } for(let cIdx=cStart;cIdx<=cEnd;cIdx++){ const ch=b.chapters[cIdx]; for(let vi=0;vi<ch.length;vi++){ const v=ch[vi]; const {count,matched}=countMatches(v,searchObj); if(matched && count>0){ rows.push({ book:b.name, chapter:cIdx+1, verse:vi+1, text:v, count }); total+=count; perBook[b.name]=(perBook[b.name]||0)+count; const key=`${b.name} ${cIdx+1}`; perChap[key]=(perChap[key]||0)+count; if(rows.length>MAX_SEARCH_RESULTS){ exceeded=true; break outer; } } } } } const orderMap=new Map(); bible.forEach((b,i)=>orderMap.set(b.name,i)); rows.sort((a,b)=>{ const ai=orderMap.get(a.book); const bi=orderMap.get(b.book); if(ai!==bi) return ai-bi; if(a.chapter!==b.chapter) return a.chapter-b.chapter; return a.verse-b.verse; }); if(exceeded){ return { rows:[], totalMatches: total, perBook:{}, perChap:{}, exceeded:true }; } return { rows, totalMatches:total, perBook, perChap, exceeded:false }; },[bible,searchObj,searchScope,bookIdx,chapFrom,chapTo]);
   // Canonical (Protestant 66) order list for stable statistics ordering
   const CANONICAL_ORDER = [
@@ -1938,8 +2038,16 @@ export default function BibleApp(){
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {/* TTS controls moved to footer for mobile; keep header uncluttered */}
-                <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> { setChapterIdx(c=> clamp(c-1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>◀︎</button>
-                <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> { setChapterIdx(c=> clamp(c+1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>▶︎</button>
+                <button
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  disabled={!hasPrevChapterOverall}
+                  onClick={goPrevChapter}
+                >◀︎</button>
+                <button
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  disabled={!hasNextChapterOverall}
+                  onClick={goNextChapter}
+                >▶︎</button>
               </div>
             </div>
           </div>
@@ -2141,7 +2249,8 @@ export default function BibleApp(){
   <div className="w-full px-3 py-2 grid grid-cols-1">
           <div className="flex justify-center items-center gap-2">
             <button aria-expanded={showControls} onClick={()=> setShowControls(v=>!v)} className={classNames('rounded-lg px-4 py-2 border text-sm', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600', showControls && 'ring-1 ring-slate-400/50 dark:ring-slate-500/50')}>Controls</button>
-            {/* Split button: Play/Stop + Verse chooser (unified TTS feature) */}
+            {/* Split button: Play/Stop + Verse chooser (read mode only) */}
+            {mode==='read' && (
             <div className="inline-flex rounded-xl overflow-hidden border border-indigo-500 dark:border-indigo-500 shadow-sm">
               <button
                 className={classNames(
@@ -2167,10 +2276,23 @@ export default function BibleApp(){
                 title="Choose starting verse"
                 aria-haspopup="dialog"
               >
-                {readVerses.length>0 ? `Verse ${Math.min((ttsActiveIndex>=0? ttsActiveIndex : ttsLastVisibleIndex)+1, readVerses.length)}/${readVerses.length}` : 'Verse —/—'}
+                {readVerses.length>0 ? `${Math.min((ttsActiveIndex>=0? ttsActiveIndex : ttsLastVisibleIndex)+1, readVerses.length)}/${readVerses.length}` : '—/—'}
                 <span className="ml-1">▾</span>
               </button>
             </div>
+            )}
+            {/* Sleep timer button (read mode only) */}
+            {mode==='read' && (
+              <button
+                className={classNames('rounded-lg px-3 py-2 border text-sm inline-flex items-center gap-2', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}
+                onClick={()=> setShowSleepTimer(true)}
+                title="Set sleep timer or stop-at chapter"
+                aria-haspopup="dialog"
+              >
+                <Icon.Clock className="h-5 w-5"/>
+                <span className="sr-only">Sleep timer</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -2382,7 +2504,7 @@ export default function BibleApp(){
       )}
 
     {/* Full-screen Verse Picker overlay */}
-    {showVersePicker && (
+  {mode==='read' && showVersePicker && (
       <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
         <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
           <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Choose Starting Verse</div>
@@ -2402,7 +2524,7 @@ export default function BibleApp(){
       </div>
     )}
     {/* Full-screen Voice Picker overlay */}
-    {showVoicePicker && (
+  {showVoicePicker && (
       <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col">
         <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
           <div className="flex items-center justify-between">
@@ -2450,6 +2572,51 @@ export default function BibleApp(){
               </div>
             );
           })}
+        </div>
+      </div>
+    )}
+
+    {/* Sleep Timer overlay */}
+  {mode==='read' && showSleepTimer && (
+      <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col">
+        <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Sleep timer</div>
+            <button onClick={()=> setShowSleepTimer(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Close</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm text-slate-700 dark:text-slate-300">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Read for (minutes):</label>
+            <input type="number" min="0" max="600" step="1" value={sleepMinutes}
+              onChange={e=> setSleepMinutes(Math.max(0, Math.min(600, parseInt(e.target.value||'0',10))))}
+              className="w-28 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">0 disables the timer.</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">Optional stop at book/chapter</div>
+            <div className="flex items-center gap-2">
+              <select value={stopAtBookIdx==null? '' : String(stopAtBookIdx)} onChange={e=>{
+                const v = e.target.value; if(v===''){ setStopAtBookIdx(null); setStopAtChapterIdx(null); }
+                else { setStopAtBookIdx(parseInt(v,10)); setStopAtChapterIdx(0); }
+              }} className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800">
+                <option value="">None</option>
+                {(bible||[]).map((b,idx)=> <option key={idx} value={idx}>{b.name}</option>)}
+              </select>
+              <select value={stopAtChapterIdx==null? '' : String(stopAtChapterIdx+1)} onChange={e=>{
+                const v = e.target.value; if(v===''){ setStopAtChapterIdx(null); }
+                else { setStopAtChapterIdx(Math.max(0, parseInt(v,10)-1)); }
+              }} disabled={stopAtBookIdx==null}
+                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800">
+                <option value="">—</option>
+                {stopAtBookIdx!=null && (bible?.[stopAtBookIdx]?.chapters||[]).map((_,i)=> <option key={i} value={i+1}>{i+1}</option>)}
+              </select>
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">Whichever comes first (time or stop-at) will stop reading.</div>
+          </div>
+          <div className="pt-2">
+            <button onClick={()=> setShowSleepTimer(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Done</button>
+          </div>
         </div>
       </div>
     )}
