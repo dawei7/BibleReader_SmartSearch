@@ -1970,6 +1970,7 @@ export default function BibleApp(){
               <div
                 ref={versesContainerRef}
                 className={classNames(
+                  'no-callout select-none md:select-text',
                   readerFontFamily==='serif'? 'font-serif':'font-sans',
                   verseLayout==='continuous'? 'space-y-0':'',
                   justifyText? 'text-justify':''

@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Disable native long-press text selection/callout on mobile when applied */
+.no-callout {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0); /* iOS/Android highlight */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 :root {
   color-scheme: light;
 }
