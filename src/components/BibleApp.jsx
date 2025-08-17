@@ -935,7 +935,7 @@ export default function BibleApp(){
         window.speechSynthesis.speak(utter);
       }
     } catch {}
-  },[ttsSupported,readVerses,ttsRate,ttsPitch,versionLangCode,stopTTS,bookIdx,chapterIdx,voicePrefMap,bible]);
+  },[ttsSupported,readVerses,ttsRate,ttsPitch,versionLangCode,stopTTS,bookIdx,chapterIdx,voicePrefMap,bible,stopAtBookIdx,stopAtChapterIdx]);
 
   const startTTS = useCallback((from)=>{
     if(!ttsSupported || !readVerses.length) return;
