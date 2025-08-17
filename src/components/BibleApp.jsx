@@ -188,6 +188,8 @@ export default function BibleApp(){
   const [showInstallConfirm, setShowInstallConfirm] = useState(false);
   // Quick confirmation when saving a bookmark
   const [showSaveToast,setShowSaveToast]=useState(false);
+  // Share/copy confirmation toast for long-press on a verse
+  const [shareToast,setShareToast] = useState('');
   // Settings management helpers (import/export/share)
   // (No visible settings sharing UI; persistence via localStorage happens automatically)
   // Settings overlay and reader preferences
@@ -602,6 +604,11 @@ export default function BibleApp(){
   const readPaneRef = useRef(null);
   const searchPaneRef = useRef(null);
   const versesContainerRef = useRef(null);
+  // Long-press handling for verse share/copy
+  const longPressTimerRef = useRef(null);
+  const longPressFiredRef = useRef(false);
+  const longPressStartRef = useRef({ x:0, y:0 });
+  const LONG_PRESS_MS = 600; // good UX: fast but avoids accidental triggers
   // refs declared once above
   // Mobile-only staged controls state
   const [mVersion,setMVersion] = useState('');
@@ -834,6 +841,55 @@ export default function BibleApp(){
       setMode('read');
     }
   }
+  // Build shareable text for a verse (includes version and reference)
+  function buildVerseShareText(verseText, bookName, chapterNumber, verseNumber){
+    const ref = `${bookName} ${chapterNumber}:${verseNumber}`;
+    const ver = activeVersionName || version || '';
+    return `${verseText}\n— ${ref} (${ver})`;
+  }
+  async function shareOrCopyText(text){
+    try {
+      if(navigator.share){
+        await navigator.share({ title: 'Bible Verse', text });
+        setShareToast('Shared');
+      } else if(navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+        setShareToast('Copied');
+      } else {
+        const ta=document.createElement('textarea');
+        ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        setShareToast('Copied');
+      }
+    } catch {
+      try { await navigator.clipboard?.writeText(text); setShareToast('Copied'); } catch {}
+    } finally {
+      setTimeout(()=> setShareToast(''), 1200);
+    }
+  }
+  function handleVersePointerDown(e, verseN, verseText){
+    longPressFiredRef.current = false;
+    clearTimeout(longPressTimerRef.current);
+    try { if(e?.pointerType==='touch') e.preventDefault(); } catch {}
+    // record starting position to cancel if user scrolls/moves
+    if(e && typeof e.clientX==='number' && typeof e.clientY==='number'){
+      longPressStartRef.current = { x: e.clientX, y: e.clientY };
+    } else { longPressStartRef.current = { x:0, y:0 }; }
+    longPressTimerRef.current = setTimeout(()=>{
+      longPressFiredRef.current = true;
+      const bookName = bible?.[bookIdx]?.name || '';
+      const payload = buildVerseShareText(verseText, bookName, chapterIdx+1, verseN);
+      shareOrCopyText(payload);
+    }, LONG_PRESS_MS);
+  }
+  function handleVersePointerMove(e){
+    const sx = longPressStartRef.current.x; const sy = longPressStartRef.current.y;
+    if(sx===0 && sy===0) return;
+    const dx = Math.abs((e?.clientX||0) - sx);
+    const dy = Math.abs((e?.clientY||0) - sy);
+    if(dx>10 || dy>10){ clearTimeout(longPressTimerRef.current); }
+  }
+  function handleVersePointerUp(){ clearTimeout(longPressTimerRef.current); }
+  function handleVersePointerCancel(){ clearTimeout(longPressTimerRef.current); }
   // After jumping from search, scroll to the target verse in read mode
   useEffect(()=>{
     if(pendingScrollVerse==null) return;
@@ -1355,10 +1411,25 @@ export default function BibleApp(){
           <div className="-mx-0 sm:mx-0">
             {(()=>{
               const countsByChap = searchResults?.perChap || {};
+              const countsByBook = searchResults?.perBook || {};
               const allBooks = (topBooks||[]).map(b=> b.name);
-              const maxChapters = Math.max(1, ...((bible||[]).filter(b=> allBooks.includes(b.name)).map(b=> b.chapters.length)));
+              // Compute width based on chapters that actually have results
+              const maxChapters = Math.max(
+                1,
+                ...((bible||[]) 
+                  .filter(b=> allBooks.includes(b.name))
+                  .map(b=> {
+                    const total = b?.chapters?.length || 0;
+                    let withResults = 0;
+                    for(let ch=1; ch<=total; ch++){
+                      if(countsByChap[`${b.name} ${ch}`] > 0) withResults++;
+                    }
+                    return withResults;
+                  }))
+              );
               const maxCount = Math.max(1, ...Object.values(countsByChap));
               const cellSize = 26; // px
+              const SCROLL_PAD = 8; // extra px to prevent last button from being clipped
               function colorFor(val){
                 if(!val) return theme==='dark'? 'rgba(148,163,184,0.15)':'rgba(15,23,42,0.05)';
                 const t = Math.min(1, val / maxCount);
@@ -1367,18 +1438,18 @@ export default function BibleApp(){
                 return theme==='dark'? dark : light;
               }
               // Use a fixed, generous label column width so every row aligns perfectly
-              const labelAreaW = 148; // px – fits longest names at 12px, prevents wrapping
+              const labelAreaW = 164; // px – allow room for count badge
         return (
           <div className="w-full rounded-none bg-white dark:bg-slate-900">
                     {/* Fancy top scrollbar (synced with the hidden bottom scroller) sticky, flush and opaque; add divider line */}
                     <div className="sticky top-0 z-30 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                       <div ref={statsTopScrollRef} className="fancy-hscroll rounded-full" aria-label="Scroll chapters horizontally">
-                        <div style={{ width: (maxChapters*(cellSize + 4)), height: 1 }} />
+                        <div style={{ width: (maxChapters*(cellSize + 4)) + SCROLL_PAD, height: 1 }} />
                       </div>
                     </div>
                     <div className="overflow-hidden pb-1 -mb-1">
                     <div ref={statsMainScrollRef} className="overflow-x-auto stats-scroll">
-                    <div className="px-0 py-3" style={{ minWidth: (maxChapters*(cellSize + 4)) }}>
+                    <div className="px-0 py-3" style={{ minWidth: (maxChapters*(cellSize + 4)) + SCROLL_PAD }}>
                       {(topBooks||[]).map(({name:bookName})=>{
                         const book = (bible||[]).find(b=> b.name===bookName);
                         const chapters = book?.chapters?.length || 0;
@@ -1394,39 +1465,47 @@ export default function BibleApp(){
                                 type="button"
                                 onClick={()=> toggleBook(bookName)}
                                 className={classNames(
-            'w-full h-full inline-flex items-center justify-center rounded-md text-[12px] font-semibold transition-colors whitespace-nowrap overflow-hidden text-ellipsis px-2',
+            'w-full h-full inline-flex items-center justify-between rounded-md text-[12px] font-semibold transition-colors whitespace-nowrap overflow-hidden text-ellipsis px-2',
                                   selectedBooks.includes(bookName)
                                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 ring-1 ring-emerald-500'
                                     : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
                                 )}
-                                title={`Toggle book: ${bookName}`}
-                              >{bookName}</button>
+                                title={`Toggle book: ${bookName} — ${ ((countsByBook[bookName]||0) > 5000 ? '5000+' : (countsByBook[bookName]||0).toLocaleString()) } matches`}
+                              >
+                                <span className="truncate">{bookName}</span>
+                                <span className="ml-2 shrink-0 inline-flex items-center justify-center rounded px-1.5 py-[1px] text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700" style={{ width: '5ch', fontVariantNumeric: 'tabular-nums' }}>
+                                  {((countsByBook[bookName]||0) > 5000 ? '5000+' : (countsByBook[bookName]||0).toLocaleString())}
+                                </span>
+                              </button>
                             </div>
                               {/* Heatmap buttons; grid col 2 always starts after fixed label col */}
-                              <div className="flex -mx-[2px]">
-                              {Array.from({length: maxChapters}, (_,i)=> i+1).map(ch=>{
-                                const key = `${bookName} ${ch}`;
-                                const val = ch <= chapters ? (countsByChap[key]||0) : null;
-                                const selected = selectedChapters.includes(key);
-                                return (
-                                  <button
-                                    key={key}
-                                    type="button"
-                                    onClick={()=> ch <= chapters && toggleChapter(key)}
-                                    className={classNames('relative inline-flex items-center justify-center m-[2px] rounded-md border',
-                                      ch<=chapters
-                                        ? (selected ? 'ring-2 ring-emerald-500 border-emerald-600' : 'border-slate-200 dark:border-slate-700')
-                                        : 'opacity-20 border-transparent pointer-events-none'
-                                    )}
-                                    title={ch<=chapters ? `${bookName} ${ch}: ${val||0}` : ''}
-                                    style={{ width: cellSize, height: cellSize, background: colorFor(val||0) }}
-                                  >
-                                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-slate-700/70 dark:text-slate-200/70 select-none">
-                                      {ch}
-                                    </span>
-                                  </button>
-                                );
-                              })}
+                              <div className="flex -mx-[2px]" style={{ paddingRight: 4 }}>
+                              {(()=>{
+                                // Only render chapters that have results
+                                const chapterList = Array.from({length: chapters}, (_,i)=> i+1)
+                                  .filter(ch => (countsByChap[`${bookName} ${ch}`]||0) > 0);
+                                return chapterList.map(ch=>{
+                                  const key = `${bookName} ${ch}`;
+                                  const val = countsByChap[key] || 0; // >0 by filter
+                                  const selected = selectedChapters.includes(key);
+                                  return (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      onClick={()=> toggleChapter(key)}
+                                      className={classNames('relative inline-flex items-center justify-center m-[2px] rounded-md border',
+                                        selected ? 'ring-2 ring-emerald-500 border-emerald-600' : 'border-slate-200 dark:border-slate-700'
+                                      )}
+                                      title={`${bookName} ${ch}: ${val}`}
+                                      style={{ width: cellSize, height: cellSize, background: colorFor(val) }}
+                                    >
+                                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-slate-700/70 dark:text-slate-200/70 select-none">
+                                        {ch}
+                                      </span>
+                                    </button>
+                                  );
+                                });
+                              })()}
                             </div>
                           </div>
                         );
@@ -1626,6 +1705,11 @@ export default function BibleApp(){
                       'py-0',
                       hoverHighlight && verseLayout==='blocks' ? 'hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors':''
                     )}
+                    onPointerDown={(e)=> handleVersePointerDown(e, v.n, v.text)}
+                    onPointerUp={handleVersePointerUp}
+                    onPointerCancel={handleVersePointerCancel}
+                    onPointerLeave={handleVersePointerCancel}
+                    onPointerMove={handleVersePointerMove}
                     style={{ scrollMarginTop: stickyReadHeight + 8 }}
                   >
                     {showNumbers && (numberStyle==='superscript'
@@ -1658,7 +1742,18 @@ export default function BibleApp(){
               <span className="text-slate-400">(enter search term)</span>
             )}
           </div>
-          <button
+          <div className="flex items-center gap-2 shrink-0">
+            {(query || queryInput) && (
+              <button
+                onClick={()=>{ setQuery(''); setQueryInput(''); resetSelections(); setShowStats(false); }}
+                className={classNames('inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}
+                aria-label="Clear search"
+                title="Clear search"
+              >
+                Clear
+              </button>
+            )}
+            <button
             onClick={()=>{
               const next = !showStats;
               setShowStats(next);
@@ -1679,6 +1774,7 @@ export default function BibleApp(){
           >
             {showStats? 'Hide' : 'Show'} Statistics & Filters
           </button>
+          </div>
         </div>
         </div>
   {/* Statistics content moved to full-screen overlay above */}
@@ -1939,6 +2035,11 @@ export default function BibleApp(){
               )}
             </div>
           </div>
+        </div>
+      )}
+    {mode==='read' && shareToast && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow">
+      {shareToast}
         </div>
       )}
 
