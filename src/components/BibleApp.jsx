@@ -235,6 +235,9 @@ export default function BibleApp(){
   const [voicePrefMap, setVoicePrefMap] = useState(()=>{
     try { const raw = localStorage.getItem('br_tts_voice_prefs'); return raw? JSON.parse(raw) : {}; } catch { return {}; }
   });
+  const refreshVoices = useCallback(()=>{
+    try { voicesRef.current = window.speechSynthesis.getVoices(); setVoicesTick(t=>t+1); } catch {}
+  },[]);
   const ttsRunIdRef = useRef(0); // increments each time a new reading session starts/stops
   const currentUtterRef = useRef(null);
   // Remember the last verse index across stops (reset on version/book/chapter change)
@@ -355,12 +358,7 @@ export default function BibleApp(){
     return candidates[0] || null;
   }
 
-  function voiceGenderHint(name){
-    const n = (name||'');
-    if(/(Female|Woman|Girl|Soprano|Alto|女|女生|女声)/i.test(n)) return 'Female';
-    if(/(Male|Man|Boy|Baritone|Bass|男|男生|男声)/i.test(n)) return 'Male';
-    return '';
-  }
+  // (Removed gender hint; voice names are not reliable indicators.)
 
   // TTS controls will be defined after readVerses and versesContainerRef to avoid TDZ errors
   const loadTokenRef=useRef(0); const bibleCacheRef=useRef({}); const bookCache=useRef({});
@@ -1898,8 +1896,19 @@ export default function BibleApp(){
                   );
                 })}
               </div>
-              <div className="mt-2">
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
                 <button onClick={()=> setShowVoicePicker(true)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Manage voices…</button>
+                <button onClick={refreshVoices} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Refresh</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Rate: <span className="font-semibold">{ttsRate.toFixed(2)}</span></label>
+                <input type="range" min="0.75" max="1.25" step="0.01" value={ttsRate} onChange={e=> setTtsRate(parseFloat(e.target.value)||1)} className="w-full" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Pitch (lower = deeper): <span className="font-semibold">{ttsPitch.toFixed(2)}</span></label>
+                <input type="range" min="0.50" max="1.20" step="0.01" value={ttsPitch} onChange={e=> setTtsPitch(parseFloat(e.target.value)||1)} className="w-full" />
               </div>
             </div>
           </div>
@@ -2442,7 +2451,6 @@ export default function BibleApp(){
                           if(lc===versionLangCode.toLowerCase()) ttsVoiceRef.current = v;
                         }} />
                         <span className="font-medium truncate">{v.name}</span>
-                        <span className="ml-auto text-[10px] opacity-80">{voiceGenderHint(v.name)}</span>
                       </label>
                     ))}
                   </div>
