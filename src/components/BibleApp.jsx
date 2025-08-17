@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 // Tiny inline SVG icons (stroke-based, inherit currentColor)
 const Icon = {
   Read: (props)=> (
@@ -49,6 +49,16 @@ const Icon = {
   Moon: (props)=> (
     <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M20 15.5A8.5 8.5 0 1 1 8.5 4 6.5 6.5 0 0 0 20 15.5z"/>
+    </svg>
+  ),
+  Play: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="currentColor" stroke="none" {...props}>
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  ),
+  Stop: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="currentColor" stroke="none" {...props}>
+      <rect x="6" y="6" width="12" height="12" rx="2" />
     </svg>
   ),
 };
@@ -150,6 +160,8 @@ function highlightText(text, regexOrObj){
   return parts.length? parts : text;
 }
 
+// (Inline VersePicker removed; replaced by full-screen overlay)
+
 // (Verse range slider removed)
 
 // Main component
@@ -190,6 +202,7 @@ export default function BibleApp(){
   const [showSaveToast,setShowSaveToast]=useState(false);
   // Share/copy confirmation toast for long-press on a verse
   const [shareToast,setShareToast] = useState('');
+  const [lpAction,setLpAction] = useState(null); // { verseN:number, verseText:string }
   // Settings management helpers (import/export/share)
   // (No visible settings sharing UI; persistence via localStorage happens automatically)
   // Settings overlay and reader preferences
@@ -206,6 +219,27 @@ export default function BibleApp(){
   const [justifyText,setJustifyText] = useState(false);
   const [hoverHighlight,setHoverHighlight] = useState(true);
   const [autoHighlightInRead,setAutoHighlightInRead] = useState(false);
+  // TTS (Text-to-Speech) state
+  const ttsSupported = (typeof window !== 'undefined' && 'speechSynthesis' in window);
+  const [ttsStatus,setTtsStatus] = useState('idle'); // 'idle' | 'playing' | 'paused'
+  const [ttsRate,setTtsRate] = useState(0.95);
+  const [ttsPitch,setTtsPitch] = useState(0.85);
+  const [ttsActiveIndex,setTtsActiveIndex] = useState(-1);
+  const ttsVoiceRef = useRef(null);
+  const ttsIndexRef = useRef(-1);
+  const ttsStoppedRef = useRef(false);
+  const voicesRef = useRef([]);
+  // Trigger re-render when voices list changes
+  const [voicesTick, setVoicesTick] = useState(0);
+  // Remember preferred voice per language code (e.g., { 'en': 'Microsoft ... voiceURI' })
+  const [voicePrefMap, setVoicePrefMap] = useState(()=>{
+    try { const raw = localStorage.getItem('br_tts_voice_prefs'); return raw? JSON.parse(raw) : {}; } catch { return {}; }
+  });
+  const ttsRunIdRef = useRef(0); // increments each time a new reading session starts/stops
+  const currentUtterRef = useRef(null);
+  // Remember the last verse index across stops (reset on version/book/chapter change)
+  const ttsLastIndexRef = useRef(0);
+  const [ttsLastVisibleIndex, setTtsLastVisibleIndex] = useState(0);
   // Scroll position preservation for each mode
   const [readScrollY,setReadScrollY]=useState(0);
   const [searchScrollY,setSearchScrollY]=useState(0);
@@ -238,6 +272,97 @@ export default function BibleApp(){
       return ()=>{ if(mql.removeEventListener) mql.removeEventListener('change', onChange); else mql.removeListener(onChange); };
     } catch { /* ignore */ }
   },[]);
+
+  // Populate available speech voices (if supported)
+  useEffect(()=>{
+    if(!ttsSupported) return;
+    const updateVoices = ()=>{
+  try { voicesRef.current = window.speechSynthesis.getVoices(); setVoicesTick(t=>t+1); }
+      catch { voicesRef.current = []; }
+    };
+    updateVoices();
+    try {
+      window.speechSynthesis.addEventListener?.('voiceschanged', updateVoices);
+    } catch {}
+    return ()=>{
+      try { window.speechSynthesis.removeEventListener?.('voiceschanged', updateVoices); } catch {}
+    };
+  },[ttsSupported]);
+
+  // Derive locale hint from version abbreviation (e.g., de_schlachter -> de)
+  const versionLangCode = useMemo(()=>{
+    try {
+      const abbr = String(version||'').toLowerCase();
+      const code = (abbr.split('_')[0]||'').slice(0,2);
+      return code || 'en';
+    } catch { return 'en'; }
+  },[version]);
+
+  function defaultLocaleFor(code){
+    switch((code||'').toLowerCase()){
+      case 'en': return 'en-US';
+      case 'de': return 'de-DE';
+      case 'zh': return 'zh-CN';
+      case 'es': return 'es-ES';
+      case 'pt': return 'pt-PT';
+      case 'fr': return 'fr-FR';
+      case 'ru': return 'ru-RU';
+      case 'ro': return 'ro-RO';
+      case 'vi': return 'vi-VN';
+      case 'el': return 'el-GR';
+      case 'ko': return 'ko-KR';
+      case 'fi': return 'fi-FI';
+      case 'eo': return 'eo';
+      case 'ar': return 'ar-SA';
+      default: return code || 'en-US';
+    }
+  }
+
+  function pickVoiceFor(code){
+    const list = voicesRef.current || [];
+    const lc = (code||'').toLowerCase();
+    // Prefer voices starting with the language code; for zh, also match name keywords
+    const nameMatches = (v)=>{
+      const name = (v.name||'').toLowerCase();
+      if(lc==='zh') return /(chinese|mandarin|cantonese|zh|han)/i.test(v.name||'');
+      if(lc==='ko') return /korean/i.test(v.name||'');
+      if(lc==='ja') return /japanese/i.test(v.name||'');
+      if(lc==='ar') return /arabic/i.test(v.name||'');
+      if(lc==='ru') return /russian/i.test(v.name||'');
+      if(lc==='el') return /greek/i.test(v.name||'');
+      if(lc==='vi') return /vietnamese/i.test(v.name||'');
+      if(lc==='pt') return /portuguese/i.test(v.name||'');
+      if(lc==='es') return /spanish/i.test(v.name||'');
+      if(lc==='fr') return /french/i.test(v.name||'');
+      if(lc==='ro') return /romanian/i.test(v.name||'');
+      if(lc==='fi') return /finnish/i.test(v.name||'');
+      if(lc==='eo') return /esperanto/i.test(v.name||'');
+      return false;
+    };
+    const matchesLang = (v)=> (v.lang||'').toLowerCase().startsWith(lc) || nameMatches(v);
+    const primary = list.filter(matchesLang);
+    // Heuristic: prefer names that hint at male/deep if available
+    const score = (v)=>{
+      let s=0;
+      const name=(v.name||'').toLowerCase();
+      const lang=(v.lang||'').toLowerCase();
+      if(lang.startsWith(lc)) s+=5;
+      if(v.localService) s+=1; if(v.default) s+=1;
+      if(/male|baritone|bass|deep|low/.test(name)) s+=2;
+      return -s; // smaller is better for Array.sort
+    };
+  const candidates = (primary.length? primary: list).slice().sort((a,b)=> score(a)-score(b));
+    return candidates[0] || null;
+  }
+
+  function voiceGenderHint(name){
+    const n = (name||'');
+    if(/(Female|Woman|Girl|Soprano|Alto|女|女生|女声)/i.test(n)) return 'Female';
+    if(/(Male|Man|Boy|Baritone|Bass|男|男生|男声)/i.test(n)) return 'Male';
+    return '';
+  }
+
+  // TTS controls will be defined after readVerses and versesContainerRef to avoid TDZ errors
   const loadTokenRef=useRef(0); const bibleCacheRef=useRef({}); const bookCache=useRef({});
   const BASE=import.meta?.env?.BASE_URL || '/';
   const FETCH_TIMEOUT_MS=8000;
@@ -578,6 +703,116 @@ export default function BibleApp(){
   },[version,bookIdx,chapterIdx,vStart,vEnd]);
   useEffect(()=>{ const t=setTimeout(()=> setQuery(queryInput.trim()),500); return ()=> clearTimeout(t); },[queryInput]);
   const readVerses = useMemo(()=> !currentBook? []: (currentBook.chapters[chapterIdx]||[]).slice(vStartEffective-1,vEndEffective).map((t,i)=>({n:i+vStartEffective,text:t})),[currentBook,chapterIdx,vStartEffective,vEndEffective]);
+
+  // TTS controls (declared after readVerses to avoid TDZ errors)
+  const stopTTS = useCallback(()=>{
+    if(!ttsSupported) return;
+    // Mark stopped BEFORE cancel so onend handlers bail out
+    ttsStoppedRef.current = true;
+    // Invalidate any in-flight session so stale onend handlers do nothing
+    ttsRunIdRef.current += 1;
+    // Detach handlers from the current utterance, if any
+    try { if(currentUtterRef.current){ currentUtterRef.current.onend = null; currentUtterRef.current.onerror = null; } } catch {}
+    try { window.speechSynthesis.cancel(); } catch {}
+    // Preserve the current index as the last remembered verse
+    if((ttsIndexRef.current|0) >= 0){
+      ttsLastIndexRef.current = ttsIndexRef.current|0;
+      setTtsLastVisibleIndex(ttsLastIndexRef.current);
+    }
+    ttsIndexRef.current = -1;
+    setTtsActiveIndex(-1);
+    setTtsStatus('idle');
+  },[ttsSupported]);
+
+  const speakIndex = useCallback((i)=>{
+    if(!ttsSupported) return;
+    if(i<0 || i>=readVerses.length){ stopTTS(); return; }
+  ttsIndexRef.current = i; setTtsActiveIndex(i);
+  ttsLastIndexRef.current = i; setTtsLastVisibleIndex(i);
+  // Reset stop flag for a new utterance chain
+  ttsStoppedRef.current = false;
+  const myRun = ttsRunIdRef.current;
+    // Auto-scroll active verse into view
+    try {
+      const v = readVerses[i];
+      const el = versesContainerRef.current?.querySelector?.(`div[data-bookidx="${bookIdx}"][data-chapter="${chapterIdx+1}"][data-verseidx="${v.n}"]`);
+      el?.scrollIntoView({ block:'center', behavior:'smooth' });
+    } catch {}
+  const v = readVerses[i];
+  const utter = new SpeechSynthesisUtterance();
+  // Speak only the verse text; do not read the verse number
+  utter.text = `${v.text}`;
+    utter.rate = ttsRate; utter.pitch = ttsPitch; utter.volume = 1;
+    // Always set the desired language; only bind a voice if it matches that language
+    const desiredLang = defaultLocaleFor(versionLangCode);
+    utter.lang = desiredLang;
+    // Prefer user-selected voice for this language; else auto-pick
+    let preferred = null;
+    try {
+      const uri = voicePrefMap?.[versionLangCode];
+      if(uri){ preferred = (voicesRef.current||[]).find(v=> v.voiceURI===uri) || null; }
+    } catch { preferred = null; }
+    // Fallback to automatic choice
+    if(!preferred) preferred = pickVoiceFor(versionLangCode) || null;
+    // Cache on ref
+    ttsVoiceRef.current = preferred;
+    // Bind voice only if it matches language heuristics (avoids wrong-language glitches)
+    if(preferred && (((preferred.lang||'').toLowerCase().startsWith((versionLangCode||'').toLowerCase())) || (/zh/i.test(versionLangCode) && /(Chinese|Mandarin|Cantonese|zh|Han)/i.test(preferred.name||'')))){
+      utter.voice = preferred;
+    }
+    utter.onend = ()=>{
+      if(ttsRunIdRef.current !== myRun) return;
+      if(ttsStoppedRef.current) return;
+      const next = (ttsIndexRef.current|0)+1;
+      if(next<readVerses.length){ speakIndex(next); }
+      else { stopTTS(); }
+    };
+    utter.onerror = ()=>{ if(ttsRunIdRef.current !== myRun) return; if(ttsStoppedRef.current) return; const next=(ttsIndexRef.current|0)+1; if(next<readVerses.length){ speakIndex(next); } else { stopTTS(); } };
+    currentUtterRef.current = utter;
+    try {
+      if(!ttsStoppedRef.current){
+        window.speechSynthesis.cancel(); // clear any pending
+        window.speechSynthesis.speak(utter);
+      }
+    } catch {}
+  },[ttsSupported,readVerses,ttsRate,ttsPitch,versionLangCode,stopTTS,bookIdx,chapterIdx,voicePrefMap]);
+
+  const startTTS = useCallback((from)=>{
+    if(!ttsSupported || !readVerses.length) return;
+    ttsStoppedRef.current = false;
+  // Start a fresh session
+  ttsRunIdRef.current += 1;
+  currentUtterRef.current = null;
+  // Fresh language => refresh voice selection; do not force voice if not matching
+  ttsVoiceRef.current = pickVoiceFor(versionLangCode) || null;
+    setTtsStatus('playing');
+    // Start at provided index, else remembered last verse, else 0
+    let startIndex = (typeof from === 'number' ? from : ttsLastIndexRef.current|0);
+    if(!(startIndex>=0 && startIndex<readVerses.length)) startIndex = 0;
+    speakIndex(clamp(startIndex,0,readVerses.length-1));
+  },[ttsSupported,readVerses,versionLangCode,speakIndex]);
+
+  // When version language changes, clear cached voice to force a re-pick next time
+  useEffect(()=>{
+    ttsVoiceRef.current = null;
+  },[versionLangCode]);
+
+  // Persist voice preferences
+  useEffect(()=>{
+    try { localStorage.setItem('br_tts_voice_prefs', JSON.stringify(voicePrefMap||{})); } catch {}
+  },[voicePrefMap]);
+
+  const pauseTTS = useCallback(()=>{ if(!ttsSupported) return; try { window.speechSynthesis.pause(); } catch {} setTtsStatus('paused'); },[ttsSupported]);
+  const resumeTTS = useCallback(()=>{ if(!ttsSupported) return; try { window.speechSynthesis.resume?.(); } catch {} setTtsStatus('playing'); },[ttsSupported]);
+
+  // Stop TTS when leaving read mode
+  useEffect(()=>{ if(mode!=='read'){ stopTTS(); } },[mode,stopTTS]);
+  // Stop and reset remembered verse when position or verse range changes
+  useEffect(()=>{
+    stopTTS();
+    ttsLastIndexRef.current = 0;
+    setTtsLastVisibleIndex(0);
+  },[bookIdx,chapterIdx,vStart,vEnd,stopTTS]);
   const searchResults = useMemo(()=>{ if(!bible || !searchObj) return { rows:[], totalMatches:0, perBook:{}, perChap:{}, exceeded:false }; const targetBooks = searchScope==='book'? [bible[bookIdx]].filter(Boolean) : bible; if(!targetBooks.length) return { rows:[], totalMatches:0, perBook:{}, perChap:{}, exceeded:false }; const rows=[]; const perBook={}; const perChap={}; let total=0; let exceeded=false; outer: for(const b of targetBooks){ let cStart=0, cEnd=b.chapters.length-1; if(searchScope==='book'){ const totalCh=b.chapters.length; const startClamped=Math.max(1,Math.min(chapFrom,totalCh)); const endRaw= chapTo===0? totalCh : Math.max(1,Math.min(chapTo,totalCh)); const endClamped=Math.max(startClamped,endRaw); cStart=startClamped-1; cEnd=endClamped-1; } for(let cIdx=cStart;cIdx<=cEnd;cIdx++){ const ch=b.chapters[cIdx]; for(let vi=0;vi<ch.length;vi++){ const v=ch[vi]; const {count,matched}=countMatches(v,searchObj); if(matched && count>0){ rows.push({ book:b.name, chapter:cIdx+1, verse:vi+1, text:v, count }); total+=count; perBook[b.name]=(perBook[b.name]||0)+count; const key=`${b.name} ${cIdx+1}`; perChap[key]=(perChap[key]||0)+count; if(rows.length>MAX_SEARCH_RESULTS){ exceeded=true; break outer; } } } } } const orderMap=new Map(); bible.forEach((b,i)=>orderMap.set(b.name,i)); rows.sort((a,b)=>{ const ai=orderMap.get(a.book); const bi=orderMap.get(b.book); if(ai!==bi) return ai-bi; if(a.chapter!==b.chapter) return a.chapter-b.chapter; return a.verse-b.verse; }); if(exceeded){ return { rows:[], totalMatches: total, perBook:{}, perChap:{}, exceeded:true }; } return { rows, totalMatches:total, perBook, perChap, exceeded:false }; },[bible,searchObj,searchScope,bookIdx,chapFrom,chapTo]);
   // Canonical (Protestant 66) order list for stable statistics ordering
   const CANONICAL_ORDER = [
@@ -642,6 +877,26 @@ export default function BibleApp(){
   // Stats overlay scrollers (top mirror and main content)
   const statsTopScrollRef = useRef(null);
   const statsMainScrollRef = useRef(null);
+  // Verse picker overlay
+  const [showVersePicker, setShowVersePicker] = useState(false);
+  // Voice picker overlay
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
+
+  // Map language codes to readable labels (basic set based on bundled versions)
+  const LANG_LABELS = useMemo(()=>({
+    en:'English', de:'German', zh:'Chinese', es:'Spanish', pt:'Portuguese', fr:'French', ru:'Russian', ro:'Romanian', vi:'Vietnamese', el:'Greek', ko:'Korean', fi:'Finnish', eo:'Esperanto', ar:'Arabic'
+  }),[]);
+  const versionLangCodes = useMemo(()=>{
+    try {
+      const s = new Set();
+      (versions||[]).forEach(v=>{ const code=((v.abbreviation||'').split('_')[0]||'').toLowerCase(); if(code) s.add(code); });
+      // If empty (not loaded yet), infer from available voices
+      if(!s.size && (voicesRef.current||[]).length){
+        (voicesRef.current||[]).forEach(vc=>{ const code = (vc.lang||'').slice(0,2).toLowerCase(); if(code) s.add(code); });
+      }
+      return Array.from(s).sort();
+    } catch { return []; }
+  },[versions, voicesTick]);
 
   // measure header + panel sizes for dynamic spacing on mobile
   // Simplified: only track header height (static) for potential future offset
@@ -876,9 +1131,13 @@ export default function BibleApp(){
     } else { longPressStartRef.current = { x:0, y:0 }; }
     longPressTimerRef.current = setTimeout(()=>{
       longPressFiredRef.current = true;
-      const bookName = bible?.[bookIdx]?.name || '';
-      const payload = buildVerseShareText(verseText, bookName, chapterIdx+1, verseN);
-      shareOrCopyText(payload);
+      if(ttsSupported){
+        setLpAction({ verseN, verseText });
+      } else {
+        const bookName = bible?.[bookIdx]?.name || '';
+        const payload = buildVerseShareText(verseText, bookName, chapterIdx+1, verseN);
+        shareOrCopyText(payload);
+      }
     }, LONG_PRESS_MS);
   }
   function handleVersePointerMove(e){
@@ -897,9 +1156,11 @@ export default function BibleApp(){
     
     const timer = setTimeout(()=>{
       const cont = readPaneRef.current;
-      const abbr = (bible?.[bookIdx]?.abbrev || bible?.[bookIdx]?.name || '').replaceAll(' ','_');
+  const abbrSrc = (bible?.[bookIdx]?.abbrev || bible?.[bookIdx]?.name || '');
+  const abbr = String(abbrSrc).split(' ').join('_');
       const targetId = `v-${abbr}.${chapterIdx+1}.${v}`;
-      const el = cont?.querySelector(`#${CSS.escape(targetId)}`);
+  // Use getElementById to avoid needing CSS.escape and optional chaining call
+  const el = document.getElementById ? document.getElementById(targetId) : null;
       if(cont && el){
         try {
           const doScroll = ()=>{
@@ -1618,6 +1879,32 @@ export default function BibleApp(){
           </div>
         </div>
 
+        {/* Voice (Text-to-Speech) */}
+        {ttsSupported && (
+          <div className="space-y-3">
+            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Text‑to‑Speech</div>
+            <div className="text-xs text-slate-600 dark:text-slate-300">
+              <div className="mb-2">Manage voices for all languages used by your installed Bibles.</div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {versionLangCodes.map(code=>{
+                  const uri = (voicePrefMap||{})[code];
+                  const vObj = (voicesRef.current||[]).find(v=> v.voiceURI===uri);
+                  const label = LANG_LABELS[code] || code.toUpperCase();
+                  return (
+                    <div key={code} className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800">
+                      <span className="font-medium mr-1">{label}:</span>
+                      <span className="opacity-80">{vObj? vObj.name : 'Auto'}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2">
+                <button onClick={()=> setShowVoicePicker(true)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Manage voices…</button>
+              </div>
+            </div>
+          </div>
+        )}
+
   {/* (No visible sharing UI) */}
 
         <div>
@@ -1657,6 +1944,7 @@ export default function BibleApp(){
                 {" "}Chapter {chapterIdx+1} ({vStartEffective}–{vEndEffective})
               </div>
               <div className="flex items-center gap-2 text-xs">
+                {/* TTS controls moved to footer for mobile; keep header uncluttered */}
                 <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx<=0} onClick={()=> { setChapterIdx(c=> clamp(c-1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>◀︎</button>
                 <button className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" disabled={chapterIdx>=chapterCount-1} onClick={()=> { setChapterIdx(c=> clamp(c+1,0,chapterCount-1)); setTimeout(()=> readPaneRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50); }}>▶︎</button>
               </div>
@@ -1676,6 +1964,9 @@ export default function BibleApp(){
               maxWidth: readerWidthPct===100 ? 'none' : 'min(1100px, 100%)'
             }}
           >
+              {!bible && (
+                <div className="text-sm text-slate-500 dark:text-slate-400">Loading…</div>
+              )}
               <div
                 ref={versesContainerRef}
                 className={classNames(
@@ -1685,8 +1976,9 @@ export default function BibleApp(){
                 )}
                 style={{ fontSize: readerFontSize? `${readerFontSize}px`: undefined, lineHeight: `${lineHeightPx}px` }}
               >
-                {readVerses.map(v=> {
-                  const abbr = (bible?.[bookIdx]?.abbrev || bible?.[bookIdx]?.name || '').replaceAll(' ','_');
+                {readVerses.map((v,i)=> {
+                  const abbrSrc = (bible?.[bookIdx]?.abbrev || bible?.[bookIdx]?.name || '');
+                  const abbr = String(abbrSrc).split(' ').join('_');
                   const osis = `${abbr}.${chapterIdx+1}.${v.n}`;
                   return (
                   // Unique id per verse (OSIS-like): v-<abbr>.<chapter>.<verse>
@@ -1703,6 +1995,7 @@ export default function BibleApp(){
                       verseLayout==='continuous' ? 'px-0' : 'px-3',
                       // Remove extra vertical padding so line-height fully controls spacing in both layouts
                       'py-0',
+                      (ttsStatus==='playing' && ttsActiveIndex===i) ? 'ring-2 ring-indigo-500/40 bg-indigo-50/40 dark:ring-indigo-400/40 dark:bg-indigo-900/20' : '',
                       hoverHighlight && verseLayout==='blocks' ? 'hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors':''
                     )}
                     onPointerDown={(e)=> handleVersePointerDown(e, v.n, v.text)}
@@ -1721,9 +2014,30 @@ export default function BibleApp(){
                   </div>
                   );
                 })}
+                {bible && readVerses.length===0 && (
+                  <div className="text-sm text-slate-400">No verses to display in this range.</div>
+                )}
               </div>
       </motion.div>
     </div>
+    {mode==='read' && lpAction && (
+      <div className="fixed inset-x-0 bottom-[56px] z-50 px-3">
+        <div className="mx-auto max-w-md flex items-center gap-2 justify-between rounded-xl border border-slate-300 dark:border-slate-600 bg-white/95 dark:bg-slate-800/95 backdrop-blur px-3 py-2 shadow">
+          <div className="text-xs text-slate-600 dark:text-slate-300 truncate">Verse {lpAction.verseN}</div>
+          <div className="flex items-center gap-2">
+            {ttsSupported && (
+              <button className="px-2.5 py-1.5 rounded-lg border border-indigo-400 bg-indigo-600 text-white text-xs font-medium" onClick={()=>{ startTTS(Math.max(0, lpAction.verseN - vStartEffective)); setLpAction(null); }}>
+                Read from here
+              </button>
+            )}
+            <button className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs" onClick={()=>{ const bookName=bible?.[bookIdx]?.name||''; const payload=buildVerseShareText(lpAction.verseText, bookName, chapterIdx+1, lpAction.verseN); shareOrCopyText(payload); setLpAction(null); }}>
+              Copy
+            </button>
+            <button className="px-2 py-1 rounded-md text-xs text-slate-500" onClick={()=> setLpAction(null)}>Close</button>
+          </div>
+        </div>
+      </div>
+    )}
     {/* Search Pane */}
   <div ref={searchPaneRef} hidden={mode!=='search'} style={{ height: `calc(100vh - ${headerHeight}px)`, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', position: 'relative', marginTop: 0, paddingBottom: bottomBarH }} className="pr-0 bg-white dark:bg-slate-900">
   {/* Statistics & Filters toggle (hidden by default) */}
@@ -1829,10 +2143,40 @@ export default function BibleApp(){
       </main>
 
     {/* Unified bottom bar (was mobile only) */}
-  <div ref={bottomBarRef} className={classNames('fixed bottom-0 inset-x-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-t border-slate-200 dark:border-slate-700 pb-[env(safe-area-inset-bottom)] transition-opacity duration-150', showControls && 'opacity-0 pointer-events-none')}>
+  <div ref={bottomBarRef} className={classNames('fixed inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-700 pb-[max(12px,env(safe-area-inset-bottom))] pt-2', 'bottom-0')}>
   <div className="w-full px-3 py-2 grid grid-cols-1">
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center gap-2">
             <button aria-expanded={showControls} onClick={()=> setShowControls(v=>!v)} className={classNames('rounded-lg px-4 py-2 border text-sm', 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600', showControls && 'ring-1 ring-slate-400/50 dark:ring-slate-500/50')}>Controls</button>
+            {/* Split button: Play/Stop + Verse chooser (unified TTS feature) */}
+            <div className="inline-flex rounded-xl overflow-hidden border border-indigo-500 dark:border-indigo-500 shadow-sm">
+              <button
+                className={classNames(
+                  'px-4 py-2 text-sm font-medium focus:outline-none inline-flex items-center justify-center',
+                  'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50'
+                )}
+                onClick={()=> (ttsStatus==='playing' ? stopTTS() : startTTS())}
+                title={!ttsSupported ? 'TTS not supported' : (ttsStatus==='playing' ? 'Stop' : 'Play')}
+                aria-label={ttsStatus==='playing' ? 'Stop' : 'Play'}
+                disabled={!ttsSupported}
+              >
+                {ttsStatus==='playing' ? <Icon.Stop className="h-6 w-6"/> : <Icon.Play className="h-6 w-6"/>}
+                <span className="sr-only">{ttsStatus==='playing' ? 'Stop' : 'Play'}</span>
+              </button>
+              <button
+                className={classNames(
+                  'px-3 py-2 text-sm font-medium border-l border-indigo-500 focus:outline-none',
+                  'bg-indigo-50 text-indigo-800 hover:bg-indigo-100',
+                  'dark:bg-indigo-900/40 dark:text-indigo-100 dark:hover:bg-indigo-800/50'
+                )}
+                onClick={()=> setShowVersePicker(true)}
+                disabled={!ttsSupported || readVerses.length===0}
+                title="Choose starting verse"
+                aria-haspopup="dialog"
+              >
+                {readVerses.length>0 ? `Verse ${Math.min((ttsActiveIndex>=0? ttsActiveIndex : ttsLastVisibleIndex)+1, readVerses.length)}/${readVerses.length}` : 'Verse —/—'}
+                <span className="ml-1">▾</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2042,6 +2386,80 @@ export default function BibleApp(){
       {shareToast}
         </div>
       )}
+
+    {/* Full-screen Verse Picker overlay */}
+    {showVersePicker && (
+      <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+        <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
+          <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Choose Starting Verse</div>
+          <button onClick={()=> setShowVersePicker(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Close</button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="grid grid-cols-6 gap-2">
+            {Array.from({length: readVerses.length }, (_,i)=> i).map(i=> (
+              <button
+                key={i}
+                onClick={()=>{ setShowVersePicker(false); startTTS(i); }}
+                className={classNames('h-10 rounded-md text-[12px] font-semibold border', i===Math.max(ttsActiveIndex, ttsLastVisibleIndex) ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}
+              >{i+1}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+    {/* Full-screen Voice Picker overlay */}
+    {showVoicePicker && (
+      <div role="dialog" aria-modal="true" className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col">
+        <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-200">Select Voices</div>
+            <button onClick={()=> setShowVoicePicker(false)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Close</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          {versionLangCodes.map(code=>{
+            const lc = code.toLowerCase();
+            const label = LANG_LABELS[lc] || lc.toUpperCase();
+            const list = (voicesRef.current||[]).filter(v=>{
+              const lang = (v.lang||'').toLowerCase();
+              const name = v.name||'';
+              const zh = lc==='zh' && /(Chinese|Mandarin|Cantonese|zh|Han)/i.test(name);
+              return lang.startsWith(lc) || zh;
+            });
+            const chosenURI = (voicePrefMap||{})[lc] || '';
+            return (
+              <div key={lc}>
+                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">{label}</div>
+                {list.length ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {list.map(v=> (
+                      <label key={v.voiceURI} className={classNames('flex items-center gap-2 px-3 py-2 rounded-lg border text-xs',
+                        chosenURI===v.voiceURI ? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                      )}>
+                        <input type="radio" name={`tts-${lc}`} className="sr-only" checked={chosenURI===v.voiceURI} onChange={()=>{
+                          setVoicePrefMap(prev=> ({ ...(prev||{}), [lc]: v.voiceURI }));
+                          if(lc===versionLangCode.toLowerCase()) ttsVoiceRef.current = v;
+                        }} />
+                        <span className="font-medium truncate">{v.name}</span>
+                        <span className="ml-auto text-[10px] opacity-80">{voiceGenderHint(v.name)}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">No voices available for this language on this device.</div>
+                )}
+                <div className="mt-2">
+                  <button className="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-600" onClick={()=>{
+                    setVoicePrefMap(prev=>{ const n={...(prev||{})}; delete n[lc]; return n; });
+                    if(lc===versionLangCode.toLowerCase()) ttsVoiceRef.current = null;
+                  }}>Auto-select</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    )}
 
   {/* Scroll to top now integrated with footer area */}
 
