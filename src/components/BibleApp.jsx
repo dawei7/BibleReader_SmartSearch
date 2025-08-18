@@ -244,6 +244,8 @@ export default function BibleApp(){
   const [ttsStatus,setTtsStatus] = useState('idle'); // 'idle' | 'playing' | 'paused'
   const [ttsRate,setTtsRate] = useState(0.95);
   const [ttsPitch,setTtsPitch] = useState(0.85);
+  // Experimental: allow TTS to continue when tab/app is hidden (browser-dependent)
+  const [allowBackgroundTTS, setAllowBackgroundTTS] = useState(false);
   const [ttsActiveIndex,setTtsActiveIndex] = useState(-1);
   const ttsVoiceRef = useRef(null);
   const ttsIndexRef = useRef(-1);
@@ -269,6 +271,8 @@ export default function BibleApp(){
   const sleepDeadlineRef = useRef(0);
   const readForMinutesRef = useRef(0);
   useEffect(()=>{ readForMinutesRef.current = readForMinutes||0; },[readForMinutes]);
+  // Keep-screen-on while TTS playing (Wake Lock API; Android Chrome; not iOS). Released on stop/hidden.
+  const wakeLockRef = useRef(null);
   // Countdown ticker (for UI countdown while reading)
   const [nowMs, setNowMs] = useState(()=> Date.now());
   // Secondary overlay to pick a preset duration
@@ -695,12 +699,13 @@ export default function BibleApp(){
         const s = JSON.parse(raw);
         if(typeof s.rate==='number') setTtsRate(clamp(s.rate, 0.50, 2.00));
         if(typeof s.pitch==='number') setTtsPitch(clamp(s.pitch, 0.25, 2.00));
+        if(typeof s.allowBackgroundTTS==='boolean') setAllowBackgroundTTS(!!s.allowBackgroundTTS);
       }
     } catch { /* ignore */ }
   },[]);
   useEffect(()=>{
-    try { localStorage.setItem('br_tts_settings', JSON.stringify({ rate: ttsRate, pitch: ttsPitch })); } catch {}
-  },[ttsRate, ttsPitch]);
+    try { localStorage.setItem('br_tts_settings', JSON.stringify({ rate: ttsRate, pitch: ttsPitch, allowBackgroundTTS })); } catch {}
+  },[ttsRate, ttsPitch, allowBackgroundTTS]);
   // Auto-highlight search terms in Read mode if enabled
   useEffect(()=>{
     if(autoHighlightInRead && mode==='read'){
@@ -832,6 +837,31 @@ export default function BibleApp(){
     setTtsStatus('idle');
   },[ttsSupported]);
 
+  // Option 1: Stop TTS when app is hidden or being closed (reliable user intent on mobile)
+  useEffect(()=>{
+    const releaseWakeLock = ()=>{ try { wakeLockRef.current?.release?.(); } catch {} wakeLockRef.current = null; };
+    const onVis = ()=>{
+      try {
+        if(document.hidden){
+          releaseWakeLock();
+          // If background TTS is allowed, don't forcibly stop on hide
+          if(!allowBackgroundTTS){
+            stopTTS();
+          }
+        }
+      } catch {}
+    };
+    const onHide = ()=>{ releaseWakeLock(); stopTTS(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', onHide);
+    window.addEventListener('beforeunload', onHide);
+    return ()=>{
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', onHide);
+      window.removeEventListener('beforeunload', onHide);
+    };
+  },[stopTTS, allowBackgroundTTS]);
+
   const speakIndex = useCallback((i)=>{
     if(!ttsSupported) return;
     if(i<0 || i>=readVerses.length){ stopTTS(); return; }
@@ -956,6 +986,39 @@ export default function BibleApp(){
     if(!(startIndex>=0 && startIndex<readVerses.length)) startIndex = 0;
     speakIndex(clamp(startIndex,0,readVerses.length-1));
   },[ttsSupported,readVerses,versionLangCode,speakIndex,readForMinutes]);
+
+  // Option 2: Keep screen awake while TTS is playing (best-effort; no-op if unsupported)
+  useEffect(()=>{
+    let cancelled = false;
+    async function acquireWakeLock(){
+      try {
+        if(cancelled) return;
+        if(!('wakeLock' in navigator)) return;
+        if(document.hidden) return;
+        if(ttsStatus !== 'playing') return;
+        // @ts-ignore - Wake Lock is experimental in some TS libs
+        const sentinel = await navigator.wakeLock.request('screen');
+        if(cancelled) { try { sentinel?.release?.(); } catch {} return; }
+        wakeLockRef.current = sentinel;
+        const onRelease = ()=>{
+          wakeLockRef.current = null;
+          // If still playing and visible, try to re-acquire (e.g., after orientation change)
+          if(!document.hidden && ttsStatus === 'playing'){
+            acquireWakeLock();
+          }
+        };
+        try { sentinel.addEventListener?.('release', onRelease); } catch {}
+      } catch {
+        // Ignore failures (iOS/Safari or user denied)
+      }
+    }
+    if(ttsStatus === 'playing'){
+      acquireWakeLock();
+    } else {
+      try { wakeLockRef.current?.release?.(); } catch {} finally { wakeLockRef.current = null; }
+    }
+    return ()=>{ cancelled = true; try { wakeLockRef.current?.release?.(); } catch {} wakeLockRef.current = null; };
+  },[ttsStatus]);
 
   // When version language changes, clear cached voice to force a re-pick next time
   useEffect(()=>{
@@ -1986,6 +2049,19 @@ export default function BibleApp(){
               <div className="mb-2">Manage voices for all languages used by your installed Bibles.</div>
               <div className="mt-2 flex items-center gap-2 flex-wrap">
                 <button onClick={()=> setShowVoicePicker(true)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Manage voices…</button>
+              </div>
+              <div className="mt-3">
+                <label className="inline-flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={allowBackgroundTTS}
+                    onChange={e=> setAllowBackgroundTTS(e.target.checked)}
+                  />
+                  Allow background TTS (experimental)
+                </label>
+                <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  May not work on all browsers/devices; iOS Safari usually suspends audio when hidden.
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
