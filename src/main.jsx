@@ -14,11 +14,11 @@ if ('serviceWorker' in navigator) {
 			// Force periodic update check on load
 			try { reg.update(); } catch {}
 
-			// Listen for waiting worker
+			// Listen for waiting worker and surface a custom event instead of auto reloading
 			const checkWaiting = () => {
 				if (reg.waiting) {
-					// In this app we auto-activate immediately
-					try { reg.waiting.postMessage('SKIP_WAITING'); } catch {}
+					// Notify app UI that an update is ready
+					try { window.dispatchEvent(new CustomEvent('br_update_available', { detail: { registration: reg } })); } catch {}
 				}
 			};
 			reg.addEventListener('updatefound', () => {
@@ -33,10 +33,9 @@ if ('serviceWorker' in navigator) {
 			checkWaiting();
 		}).catch(() => {});
 
-		// Reload when new controller takes over
+		// Reload only if user explicitly approved update
 		navigator.serviceWorker.addEventListener('controllerchange', () => {
-			// Avoid infinite loop: only reload once per activation
-			if (!window.__reloadedForSW) {
+			if (window.__br_userInitiatedUpdate && !window.__reloadedForSW) {
 				window.__reloadedForSW = true;
 				window.location.reload();
 			}

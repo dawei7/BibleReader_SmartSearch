@@ -222,6 +222,9 @@ export default function BibleApp(){
   const [showSaveToast,setShowSaveToast]=useState(false);
   // Share/copy confirmation toast for long-press on a verse
   const [shareToast,setShareToast] = useState('');
+  // Service worker update toast
+  const [updateReady,setUpdateReady] = useState(false);
+  const swRegRef = useRef(null);
   const [lpAction,setLpAction] = useState(null); // { verseN:number, verseText:string }
   // Settings management helpers (import/export/share)
   // (No visible settings sharing UI; persistence via localStorage happens automatically)
@@ -1253,6 +1256,26 @@ export default function BibleApp(){
     }
     return ()=>{ if(body.dataset._prevOverflow!==undefined){ body.style.overflow=body.dataset._prevOverflow; delete body.dataset._prevOverflow; } };
   },[showControls,showAbout,showStats,showInstallConfirm]);
+  // Listen for service worker update availability (dispatched from main.jsx)
+  useEffect(()=>{
+    function onUpd(e){
+      try { swRegRef.current = e.detail?.registration || null; } catch { swRegRef.current = null; }
+      setUpdateReady(true);
+    }
+    window.addEventListener('br_update_available', onUpd);
+    return ()=> window.removeEventListener('br_update_available', onUpd);
+  },[]);
+  function applyUpdateNow(){
+    const reg = swRegRef.current;
+    if(reg && reg.waiting){
+      try { reg.waiting.postMessage('SKIP_WAITING'); } catch {}
+      // Mark that reload is user-approved
+      window.__br_userInitiatedUpdate = true;
+    }
+    // Hide toast (reload will happen when controllerchange fires)
+    setUpdateReady(false);
+  }
+  function dismissUpdateToast(){ setUpdateReady(false); }
   // Close Install confirm on Escape
   useEffect(()=>{ if(!showInstallConfirm) return; const onKey=(e)=>{ if(e.key==='Escape') setShowInstallConfirm(false); }; window.addEventListener('keydown',onKey); return ()=> window.removeEventListener('keydown',onKey); },[showInstallConfirm]);
   // Sync the top fancy scrollbar with the hidden main horizontal scroller in Statistics overlay
@@ -1712,6 +1735,16 @@ export default function BibleApp(){
       Saved as defaults
         </div>
       )}
+    {updateReady && (
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[95%] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 shadow-xl rounded-xl px-4 py-3 flex flex-col gap-2 text-[13px] text-slate-700 dark:text-slate-200">
+        <div className="font-medium text-slate-800 dark:text-slate-100">Update available</div>
+        <div className="text-[12px] text-slate-500 dark:text-slate-400">A new version of the app is ready. Reload to get the latest improvements.</div>
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button onClick={dismissUpdateToast} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">Later</button>
+          <button onClick={applyUpdateNow} className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-600">Reload now</button>
+        </div>
+      </div>
+    )}
 
   <main
   className="flex-1 w-full px-0 pb-0 overflow-hidden transition-[padding]"
