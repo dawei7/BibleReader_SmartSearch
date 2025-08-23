@@ -1142,6 +1142,22 @@ export default function BibleApp(){
   const LANG_LABELS = {
     en:'English', de:'German', zh:'Chinese', es:'Spanish', pt:'Portuguese', fr:'French', ru:'Russian', ro:'Romanian', vi:'Vietnamese', el:'Greek', ko:'Korean', fi:'Finnish', eo:'Esperanto', ar:'Arabic'
   };
+  // Languages present across installed/known versions (used by Voice picker)
+  const versionLangCodes = useMemo(()=>{
+    const codes = new Set();
+    // include current version's lang code immediately
+    if(versionLangCode) codes.add(versionLangCode.toLowerCase());
+    (versions||[]).forEach(v=>{
+      // version objects may have different property names; fall back to string itself
+      let abbr = '';
+      if(typeof v === 'string') abbr = v;
+      else abbr = v.abbr || v.abbrev || v.id || v.code || '';
+      if(!abbr) return;
+      const c = String(abbr).split('_')[0].slice(0,2).toLowerCase();
+      if(c) codes.add(c);
+    });
+    return Array.from(codes).sort();
+  },[versions, versionLangCode]);
   // Stats overlay scrollers (top mirror and main content)
   const statsTopScrollRef = useRef(null);
   const statsMainScrollRef = useRef(null);
