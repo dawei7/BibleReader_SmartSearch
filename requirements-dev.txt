@@ -1,0 +1,13 @@
+# Development dependencies for Python helper scripts
+# Install with:  pip install -r requirements-dev.txt
+# (Use a virtual environment: python -m venv venv && venv\Scripts\activate)
+
+# Excel COM automation
+# NOTE: 306 was yanked / not available on PyPI for your platform; valid versions start at 307 (current series 307..311).
+# Keep an upper cap just ahead of the current latest to avoid unexpected breaking changes.
+pywin32>=307,<312
+
+# (Optional) linting / formatting tools – uncomment if you want them
+# black==24.4.2
+# ruff==0.5.5
+

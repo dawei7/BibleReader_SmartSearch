@@ -36,7 +36,7 @@ No TypeScript yet (pure JSX) – easy to add later.
   - Color‑coded legend (Prophecy = amber · Fulfillment = emerald) shown once globally.
   - Dual summaries (prophecy / fulfillment) with matching colored left borders.
   - Reference line with independently highlighted prophecy vs fulfillment references.
-  - Draft search input + Apply button: live preview count (asterisk * when draft differs) before committing.
+  - Draft search input + Apply button: live preview count (asterisk \* when draft differs) before committing.
   - Regex / token aware highlighting of search terms inside references & summaries.
   - Re‑ordered overlay: prophecy summary → prophecy passages → fulfillment summary → fulfillment passages for clarity.
   - Passage modal uses a React portal to guarantee full overlay (no bleed‑through) and scroll lock.
@@ -128,8 +128,14 @@ Each item (example trimmed):
   "id": 101,
   "prophecyRef": "Deuteronomy 18:15",
   "summary": {
-    "en": { "prophecy": "Moses foretells a Prophet like himself…", "fulfillment": "Peter applies this to Christ (Acts 3)…" },
-    "de": { "prophecy": "Mose kündigt einen Propheten wie ihn an…", "fulfillment": "Petrus bezieht dies auf Christus (Apg 3)…" }
+    "en": {
+      "prophecy": "Moses foretells a Prophet like himself…",
+      "fulfillment": "Peter applies this to Christ (Acts 3)…"
+    },
+    "de": {
+      "prophecy": "Mose kündigt einen Propheten wie ihn an…",
+      "fulfillment": "Petrus bezieht dies auf Christus (Apg 3)…"
+    }
   },
   "fulfillment": {
     "biblicalRef": "Acts 3:22; Acts 7:37",
@@ -175,7 +181,7 @@ Typical flow:
 
 ### Disclaimer (Displayed In‑App)
 
-The Prophecies & Fulfillments module is an **experimental prototype**. References, summaries, and linkages are still under manual review; *no guarantee of doctrinal, historical, or factual completeness or accuracy* is implied. Always verify against Scripture. Corrections and contributions are welcome while this dataset remains a work in progress.
+The Prophecies & Fulfillments module is an **experimental prototype**. References, summaries, and linkages are still under manual review; _no guarantee of doctrinal, historical, or factual completeness or accuracy_ is implied. Always verify against Scripture. Corrections and contributions are welcome while this dataset remains a work in progress.
 
 ## Getting Started
 

@@ -10,7 +10,11 @@
     "preview": "vite preview",
     "update:abbrevs": "node scripts/updateAbbrevs.js",
     "icons": "node scripts/gen-icons.js",
-    "lint": "eslint src --ext .js,.jsx"
+    "lint": "eslint src --ext .js,.jsx",
+    "import:prophecies": "node scripts/importProphecies.js",
+    "eras:convert": "node scripts/convertEra.js",
+    "csv:normalize": "node scripts/normalizePropheciesCsv.js",
+    "prophecies:strip-meta": "node scripts/stripProphecyMeta.js"
   },
   "dependencies": {
     "framer-motion": "^12.23.12",
