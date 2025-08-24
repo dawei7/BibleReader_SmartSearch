@@ -347,7 +347,7 @@ def op_export(json_path: str):
     except Exception:
         last_row = ws.Cells(ws.Rows.Count, 1).End(-4162).Row  # fallback (xlUp = -4162)
     entries = []
-    seen_ids = {}
+    seen_prophecy_refs = {}
     # Iterate over every physical row index (filtered rows may be Hidden but still processed)
     for ri in range(2, last_row+1):
         values = [str(ws.Cells(ri, ci).Value).strip() if ws.Cells(ri, ci).Value is not None else '' for ci in range(1, len(COLUMNS)+1)]
@@ -355,14 +355,15 @@ def op_export(json_path: str):
         if not any(values):
             continue
         entry = entry_from_row(values)
-        pid = entry.get('id', '')
+        # Uniqueness requirement: prophecy_ref column (mirrored into id)
+        pid = entry.get('prophecyRef', '') or entry.get('id','')
         if pid:
-            seen_ids.setdefault(pid, []).append(ri)
+            seen_prophecy_refs.setdefault(pid, []).append(ri)
         entries.append(entry)
-    # Duplicate id check
-    duplicates = {k: v for k, v in seen_ids.items() if len(v) > 1}
+    # Duplicate prophecy_ref check (biblical_ref duplicates allowed)
+    duplicates = {k: v for k, v in seen_prophecy_refs.items() if len(v) > 1}
     if duplicates:
-        msg_lines = ["Duplicate ID(s) detected – export aborted:"]
+        msg_lines = ["Duplicate prophecy_ref detected – export aborted:"]
         for k, rows in duplicates.items():
             msg_lines.append(f"  {k} (rows {', '.join(map(str, rows))})")
         full_msg = "\n".join(msg_lines)
