@@ -2108,8 +2108,9 @@ export default function BibleApp(){
           <div>
             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Modes</h4>
             <ul className="mt-1 list-disc list-inside space-y-1">
-              <li><span className="font-medium">Read</span> — one chapter at a time with a simple, distraction‑free layout.</li>
-              <li><span className="font-medium">Search</span> — find verses fast. Choose All, Any, or Phrase; limit to whole Bible or a single book; optionally narrow to chapter ranges. Tap a result to jump to Read at that verse.</li>
+              <li><span className="font-medium">Read</span> — one chapter at a time; long‑press a verse for copy/share or to start TTS there.</li>
+              <li><span className="font-medium">Search</span> — fast multi‑mode verse search (All / Any / Phrase) across whole Bible or a chosen book + optional chapter range; tap a result to jump to that verse in Read.</li>
+              <li><span className="font-medium">Prophecy</span> — experimental Prophecies & Fulfillments explorer with color legend, dual summaries, passage overlay, draft+Apply search, and disclaimer (dataset still under review).</li>
             </ul>
           </div>
 
@@ -2126,34 +2127,46 @@ export default function BibleApp(){
           <div>
             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Read aloud (voice)</h4>
             <ul className="mt-1 list-disc list-inside space-y-1">
-              <li>Play/Pause to start or pause reading the current chapter; choose the starting verse from the small counter button.</li>
-              <li><span className="font-medium">Read for</span> lets you set a timer (presets or custom minutes). A small countdown appears in the button while reading.</li>
-              <li>Optionally set a <span className="font-medium">stop‑at</span> book/chapter. It’s inclusive: the app finishes that chapter and then stops.</li>
-              <li>Reading stops at whichever comes first: the timer or the inclusive stop‑at. Clear both with the split Clear button next to Read for.</li>
-              <li>You can pick a different voice (per language) from the Voice picker.</li>
+              <li>Play/Stop controls verse‑by‑verse TTS; counter button (▾) lets you pick a starting verse.</li>
+              <li><span className="font-medium">Read for</span> sets a sleep timer (presets or custom minutes) with live countdown.</li>
+              <li>Optional inclusive <span className="font-medium">stop‑at</span> book/chapter ends playback after finishing that chapter.</li>
+              <li>Playback halts on whichever occurs first: timer expiry or stop‑at target; Clear (✕) resets both.</li>
+              <li>Per‑language voice preference remembered; background play optional (browser permitting).</li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Search results & filters</h4>
             <ul className="mt-1 list-disc list-inside space-y-1">
-              <li>Results show matching verses. Tap any result to jump to Read at that exact place.</li>
-              <li>Open Statistics to see matches by book and chapter, then tap to focus your list.</li>
+              <li>Results list each matching verse with per‑verse match count (×). Tap to open in Read mode.</li>
+              <li>Statistics overlay: heatmap by book & chapter; tap to filter; badge shows current filtered total.</li>
+              <li>Case sensitivity toggle refines token detection; phrase mode honors word boundaries.</li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Appearance</h4>
             <ul className="mt-1 list-disc list-inside space-y-1">
-              <li>Change font size, serif/sans, line height, reader width, and verse number style.</li>
-              <li>Theme: System, Light, or Dark.</li>
+              <li>Adjust font size, serif/sans, line height, width %, verse number style, justification.</li>
+              <li>Theme: System / Light / Dark; per‑language TTS voice preferences.</li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Install</h4>
             <ul className="mt-1 list-disc list-inside space-y-1">
-              <li>Use the Install button (if offered) to add the app to your home screen for a full‑screen experience.</li>
+              <li>Use Install (if offered) to add the PWA to your home screen for an offline‑capable, full‑screen experience.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Prophecy (beta)</h4>
+            <ul className="mt-1 list-disc list-inside space-y-1">
+              <li>Legend + single global result badge (asterisk * = draft preview before Apply).</li>
+              <li>Color‑coded summaries & references (amber prophecy, emerald fulfillment).</li>
+              <li>Draft search updates preview count live; Apply commits & highlights matches.</li>
+              <li>Passage modal (More) opens full‑screen; background scroll locked.</li>
+              <li>Disclaimer card clarifies dataset is still under review—verify against Scripture.</li>
             </ul>
           </div>
         </div>
