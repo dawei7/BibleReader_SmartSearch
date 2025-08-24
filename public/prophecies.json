@@ -1184,38 +1184,6 @@
     }
   },
   {
-    "id": "Ps 110:4",
-    "prophecyRef": "Ps 110:4",
-    "summary": {
-      "prophecy": "Priest forever after the order of Melchizedek",
-      "fulfillment": "Christ's eternal priesthood",
-      "en": {
-        "prophecy": "Priest forever after the order of Melchizedek",
-        "fulfillment": "Christ's eternal priesthood"
-      },
-      "de": {
-        "prophecy": "Priester in Ewigkeit nach der Ordnung Melchisedeks",
-        "fulfillment": "Christi ewiges Priestertum"
-      }
-    },
-    "category": {
-      "en": "Psalms",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Heb 5-7",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: 1st c. AD onward",
-      "de": ""
-    }
-  },
-  {
     "id": "Ps 118:22-23",
     "prophecyRef": "Ps 118:22-23",
     "summary": {
@@ -1987,14 +1955,14 @@
     "id": "Isa 7:14",
     "prophecyRef": "Isa 7:14",
     "summary": {
-      "prophecy": "Virgin/young woman to conceive Immanuel ('God with us')",
+      "prophecy": "Virgin woman to conceive Immanuel ('God with us')",
       "fulfillment": "Conception and birth of Jesus the Messiah",
       "en": {
-        "prophecy": "Virgin/young woman to conceive Immanuel ('God with us')",
+        "prophecy": "Virgin woman to conceive Immanuel ('God with us')",
         "fulfillment": "Conception and birth of Jesus the Messiah"
       },
       "de": {
-        "prophecy": "Jungfrau/junge Frau empfängt Immanuel ('Gott mit uns')",
+        "prophecy": "JungfrauFrau empfängt Immanuel ('Gott mit uns')",
         "fulfillment": "Empfängnis und Geburt Jesu, des Messias"
       }
     },
@@ -2172,38 +2140,6 @@
     },
     "notes": {
       "en": "Date: c. 594-593 BC",
-      "de": ""
-    }
-  },
-  {
-    "id": "Jer 31:31-34",
-    "prophecyRef": "Jer 31:31-34",
-    "summary": {
-      "prophecy": "New Covenant with Israel and Judah",
-      "fulfillment": "New Covenant inaugurated by Jesus; law written on hearts",
-      "en": {
-        "prophecy": "New Covenant with Israel and Judah",
-        "fulfillment": "New Covenant inaugurated by Jesus; law written on hearts"
-      },
-      "de": {
-        "prophecy": "Neuer Bund mit Israel und Juda",
-        "fulfillment": "Neuer Bund durch Jesus inauguriert; Gesetz in die Herzen geschrieben"
-      }
-    },
-    "category": {
-      "en": "Jeremiah",
-      "de": "Fulfilled / Ongoing"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Luke 22:20; Heb 8-10",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Applied to the Church; fullness for Israel anticipated. | Date: 30-33 AD onward",
       "de": ""
     }
   },
@@ -3344,7 +3280,7 @@
     },
     "category": {
       "en": "Zechariah",
-      "de": "Fulfilled / Partial"
+      "de": "Future"
     },
     "status": "",
     "fulfillment": {
@@ -3520,8 +3456,8 @@
     }
   },
   {
-    "id": "Isa 40:3 -> Matt 3:3",
-    "prophecyRef": "Isa 40:3 -> Matt 3:3",
+    "id": "Isa 40:3",
+    "prophecyRef": "Isa 40:3",
     "summary": {
       "prophecy": "Voice in the wilderness (explicit Matthew formula)",
       "fulfillment": "John the Baptist prepares the way of the Lord",
@@ -3552,8 +3488,8 @@
     }
   },
   {
-    "id": "Isa 40:3; Mal 3:1 (cited by Jesus)",
-    "prophecyRef": "Isa 40:3; Mal 3:1 (cited by Jesus)",
+    "id": "Isa 40:3; Mal 3:1",
+    "prophecyRef": "Isa 40:3; Mal 3:1",
     "summary": {
       "prophecy": "Forerunner prepares the way",
       "fulfillment": "John the Baptist's ministry",
@@ -3584,8 +3520,8 @@
     }
   },
   {
-    "id": "Isa 42:1-4 -> Matt 12:17-21",
-    "prophecyRef": "Isa 42:1-4 -> Matt 12:17-21",
+    "id": "Isa 42:1-4",
+    "prophecyRef": "Isa 42:1-4",
     "summary": {
       "prophecy": "Servant who brings justice to the nations; gentle, not breaking bruised reed",
       "fulfillment": "Jesus' meek, healing ministry to the nations",
@@ -3616,8 +3552,8 @@
     }
   },
   {
-    "id": "Isa 53:1 -> John 12:38",
-    "prophecyRef": "Isa 53:1 -> John 12:38",
+    "id": "Isa 53:1",
+    "prophecyRef": "Isa 53:1",
     "summary": {
       "prophecy": "Who has believed our report? (unbelief in spite of signs)",
       "fulfillment": "Persistent unbelief fulfills Isaiah",
@@ -3648,8 +3584,8 @@
     }
   },
   {
-    "id": "Isa 54:13 -> John 6:45",
-    "prophecyRef": "Isa 54:13 -> John 6:45",
+    "id": "Isa 54:13",
+    "prophecyRef": "Isa 54:13",
     "summary": {
       "prophecy": "All your children shall be taught by the LORD",
       "fulfillment": "Disciples taught by God through the Son",
@@ -3680,8 +3616,8 @@
     }
   },
   {
-    "id": "Isa 61:1-2 -> Luke 4:16-21",
-    "prophecyRef": "Isa 61:1-2 -> Luke 4:16-21",
+    "id": "Isa 61:1-2",
+    "prophecyRef": "Isa 61:1-2",
     "summary": {
       "prophecy": "Today this Scripture is fulfilled in your hearing (Isaiah 61)",
       "fulfillment": "Jesus proclaims Jubilee deliverance; Messianic ministry inaugurated",
@@ -3712,8 +3648,8 @@
     }
   },
   {
-    "id": "Isa 6:10 -> John 12:40",
-    "prophecyRef": "Isa 6:10 -> John 12:40",
+    "id": "Isa 6:10",
+    "prophecyRef": "Isa 6:10",
     "summary": {
       "prophecy": "He has blinded their eyes (judicial hardening)",
       "fulfillment": "Isaiah's hardening theme applied to Israel's leaders",
@@ -3744,8 +3680,8 @@
     }
   },
   {
-    "id": "Isa 6:9-10 -> Matt 13:14-15",
-    "prophecyRef": "Isa 6:9-10 -> Matt 13:14-15",
+    "id": "Isa 6:9-10",
+    "prophecyRef": "Isa 6:9-10",
     "summary": {
       "prophecy": "Hearing you will hear and not understand (judicial hardening)",
       "fulfillment": "Parables reveal and conceal per Isaiah's word",
@@ -3764,7 +3700,7 @@
     },
     "status": "",
     "fulfillment": {
-      "biblicalRef": "Matt 13:14-15",
+      "biblicalRef": "Matt 13:14-15; Acts 28:25-28",
       "externalRef": {
         "en": "",
         "de": ""
@@ -3808,8 +3744,8 @@
     }
   },
   {
-    "id": "Mal 3:1; Isa 40:3 -> Mark 1:2-3; Luke 3:4-6",
-    "prophecyRef": "Mal 3:1; Isa 40:3 -> Mark 1:2-3; Luke 3:4-6",
+    "id": "Mal 3:1; Isa 40:3",
+    "prophecyRef": "Mal 3:1; Isa 40:3",
     "summary": {
       "prophecy": "Prepare the way of the Lord (Elijah-like forerunner)",
       "fulfillment": "John the Baptist prepares the Lord's way",
@@ -4256,8 +4192,8 @@
     }
   },
   {
-    "id": "Deut 18:15-19; Gen 12:3 -> Acts 3:22-26",
-    "prophecyRef": "Deut 18:15-19; Gen 12:3 -> Acts 3:22-26",
+    "id": "Deut 18:15-19; Gen 12:3",
+    "prophecyRef": "Deut 18:15-19; Gen 12:3",
     "summary": {
       "prophecy": "The Prophet like Moses; blessing to all families",
       "fulfillment": "Jesus the Prophet; Abrahamic blessing flows to all peoples",
@@ -4288,8 +4224,8 @@
     }
   },
   {
-    "id": "Hab 1:5 -> Acts 13:40-41",
-    "prophecyRef": "Hab 1:5 -> Acts 13:40-41",
+    "id": "Hab 1:5",
+    "prophecyRef": "Hab 1:5",
     "summary": {
       "prophecy": "Behold, you scoffers (warning applied to hearers)",
       "fulfillment": "Prophetic warning applied in apostolic preaching",
@@ -4320,8 +4256,8 @@
     }
   },
   {
-    "id": "Isa 53:7-8 -> Acts 8:32-35",
-    "prophecyRef": "Isa 53:7-8 -> Acts 8:32-35",
+    "id": "Isa 53:7-8",
+    "prophecyRef": "Isa 53:7-8",
     "summary": {
       "prophecy": "Isaiah 53 read and fulfilled in Jesus",
       "fulfillment": "Philip preaches Jesus from the Suffering Servant passage",
@@ -4352,8 +4288,8 @@
     }
   },
   {
-    "id": "Isa 55:3 -> Acts 13:34",
-    "prophecyRef": "Isa 55:3 -> Acts 13:34",
+    "id": "Isa 55:3",
+    "prophecyRef": "Isa 55:3",
     "summary": {
       "prophecy": "I will give you the holy and sure blessings of David",
       "fulfillment": "Resurrection secures Davidic covenant blessings",
@@ -4384,104 +4320,8 @@
     }
   },
   {
-    "id": "Isa 6:9-10 -> Acts 28:25-28",
-    "prophecyRef": "Isa 6:9-10 -> Acts 28:25-28",
-    "summary": {
-      "prophecy": "Hearing you will hear and not understand",
-      "fulfillment": "Judicial hardening; salvation sent to the Gentiles",
-      "en": {
-        "prophecy": "Hearing you will hear and not understand",
-        "fulfillment": "Judicial hardening; salvation sent to the Gentiles"
-      },
-      "de": {
-        "prophecy": "Hörend werdet ihr hören und doch nicht verstehen",
-        "fulfillment": "Gerichtliche Verhärtung; Heil geht zu den Heiden"
-      }
-    },
-    "category": {
-      "en": "Acts",
-      "de": "Fulfilled / Ongoing"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Acts 28:25-28",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: 1st c. AD onward",
-      "de": ""
-    }
-  },
-  {
-    "id": "Ps 110:1 -> Acts 2:34-36",
-    "prophecyRef": "Ps 110:1 -> Acts 2:34-36",
-    "summary": {
-      "prophecy": "The LORD said to my Lord, Sit at my right hand",
-      "fulfillment": "Exaltation of Christ to God's right hand",
-      "en": {
-        "prophecy": "The LORD said to my Lord, Sit at my right hand",
-        "fulfillment": "Exaltation of Christ to God's right hand"
-      },
-      "de": {
-        "prophecy": "Der HERR sprach zu meinem Herrn: Setze dich zu meiner Rechten",
-        "fulfillment": "Erhöhung Christi zur Rechten Gottes"
-      }
-    },
-    "category": {
-      "en": "Acts",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Acts 2:34-36",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: 33 AD onward",
-      "de": ""
-    }
-  },
-  {
-    "id": "Ps 16:10 -> Acts 13:35-37",
-    "prophecyRef": "Ps 16:10 -> Acts 13:35-37",
-    "summary": {
-      "prophecy": "You will not let Your Holy One see corruption",
-      "fulfillment": "Jesus rises before decay",
-      "en": {
-        "prophecy": "You will not let Your Holy One see corruption",
-        "fulfillment": "Jesus rises before decay"
-      },
-      "de": {
-        "prophecy": "Du wirst nicht zulassen, dass dein Heiliger Verwesung sieht",
-        "fulfillment": "Jesus steht vor der Verwesung auf"
-      }
-    },
-    "category": {
-      "en": "Acts",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Acts 13:35-37",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: 33 AD",
-      "de": ""
-    }
-  },
-  {
-    "id": "Ps 2:1-2 -> Acts 4:25-28",
-    "prophecyRef": "Ps 2:1-2 -> Acts 4:25-28",
+    "id": "Ps 2:1-2",
+    "prophecyRef": "Ps 2:1-2",
     "summary": {
       "prophecy": "Why do the nations rage? (fulfilled in crucifixion conspiracy)",
       "fulfillment": "Herod, Pilate, Gentiles, and Israel gather against the Messiah",
@@ -4512,40 +4352,8 @@
     }
   },
   {
-    "id": "Ps 2:7 -> Acts 13:33",
-    "prophecyRef": "Ps 2:7 -> Acts 13:33",
-    "summary": {
-      "prophecy": "You are My Son; today I have begotten You",
-      "fulfillment": "Applied to Christ's resurrection/exaltation",
-      "en": {
-        "prophecy": "You are My Son; today I have begotten You",
-        "fulfillment": "Applied to Christ's resurrection/exaltation"
-      },
-      "de": {
-        "prophecy": "Du bist mein Sohn; heute habe ich dich gezeugt",
-        "fulfillment": "Auf Christi Auferstehung/Erhöhung angewandt"
-      }
-    },
-    "category": {
-      "en": "Acts",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Acts 13:32-33",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: 33 AD",
-      "de": ""
-    }
-  },
-  {
-    "id": "Gen 12:3; 22:18; 26:4; 28:14 -> Gal 3:8,16,29",
-    "prophecyRef": "Gen 12:3; 22:18; 26:4; 28:14 -> Gal 3:8,16,29",
+    "id": "Gen 12:3; 22:18; 26:4; 28:14",
+    "prophecyRef": "Gen 12:3; 22:18; 26:4; 28:14",
     "summary": {
       "prophecy": "In you all nations blessed / Seed promises",
       "fulfillment": "Blessing to the nations realized in Christ, Abraham's Seed",
@@ -4608,8 +4416,8 @@
     }
   },
   {
-    "id": "Hos 2:23; 1:10 -> 1 Pet 2:10",
-    "prophecyRef": "Hos 2:23; 1:10 -> 1 Pet 2:10",
+    "id": "Hos 2:23; 1:10",
+    "prophecyRef": "Hos 2:23; 1:10",
     "summary": {
       "prophecy": "Not My people -> My people; no mercy -> mercy",
       "fulfillment": "Gentile believers incorporated into God's people",
@@ -4620,38 +4428,6 @@
       "de": {
         "prophecy": "Nicht-Mein-Volk -> Mein Volk; keine Barmherzigkeit -> Barmherzigkeit",
         "fulfillment": "Heiden als Gottes Volk einbezogen"
-      }
-    },
-    "category": {
-      "en": "Epistles",
-      "de": "Fulfilled / Ongoing"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "1 Pet 2:10",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: 1st c. AD onward",
-      "de": ""
-    }
-  },
-  {
-    "id": "Hos 2:23; 1:10 -> Rom 9:25-26",
-    "prophecyRef": "Hos 2:23; 1:10 -> Rom 9:25-26",
-    "summary": {
-      "prophecy": "Those who were not my people called My people",
-      "fulfillment": "Gentile inclusion and mercy in Christ",
-      "en": {
-        "prophecy": "Those who were not my people called My people",
-        "fulfillment": "Gentile inclusion and mercy in Christ"
-      },
-      "de": {
-        "prophecy": "Die, die nicht mein Volk waren, werden 'mein Volk' genannt",
-        "fulfillment": "Heidenaufnahme und Barmherzigkeit in Christus"
       }
     },
     "category": {
@@ -4672,8 +4448,8 @@
     }
   },
   {
-    "id": "Isa 10:22-23; Isa 1:9 -> Rom 9:27-29",
-    "prophecyRef": "Isa 10:22-23; Isa 1:9 -> Rom 9:27-29",
+    "id": "Isa 10:22-23; Isa 1:9",
+    "prophecyRef": "Isa 10:22-23; Isa 1:9",
     "summary": {
       "prophecy": "Though the number of Israel be as the sand, only a remnant will be saved",
       "fulfillment": "Remnant theology affirmed; preservation by grace",
@@ -4704,8 +4480,8 @@
     }
   },
   {
-    "id": "Isa 25:8; Hos 13:14 -> 1 Cor 15:54-55",
-    "prophecyRef": "Isa 25:8; Hos 13:14 -> 1 Cor 15:54-55",
+    "id": "Isa 25:8; Hos 13:14",
+    "prophecyRef": "Isa 25:8; Hos 13:14",
     "summary": {
       "prophecy": "Death swallowed up in victory",
       "fulfillment": "Victory inaugurated in Christ's resurrection; consummation to come",
@@ -4736,8 +4512,8 @@
     }
   },
   {
-    "id": "Isa 28:16 -> 1 Pet 2:6",
-    "prophecyRef": "Isa 28:16 -> 1 Pet 2:6",
+    "id": "Isa 28:16",
+    "prophecyRef": "Isa 28:16",
     "summary": {
       "prophecy": "Behold, I lay in Zion a chosen cornerstone... whoever believes will not be put to shame",
       "fulfillment": "Christ the cornerstone; believers honored",
@@ -4768,8 +4544,8 @@
     }
   },
   {
-    "id": "Isa 45:23 -> Phil 2:10-11",
-    "prophecyRef": "Isa 45:23 -> Phil 2:10-11",
+    "id": "Isa 45:23",
+    "prophecyRef": "Isa 45:23",
     "summary": {
       "prophecy": "Every knee shall bow",
       "fulfillment": "Universal acknowledgment of Jesus' lordship begun",
@@ -4800,8 +4576,8 @@
     }
   },
   {
-    "id": "Isa 49:8 -> 2 Cor 6:2",
-    "prophecyRef": "Isa 49:8 -> 2 Cor 6:2",
+    "id": "Isa 49:8",
+    "prophecyRef": "Isa 49:8",
     "summary": {
       "prophecy": "Now is the favorable time; now is the day of salvation",
       "fulfillment": "Day of salvation realized in the Gospel age",
@@ -4832,8 +4608,8 @@
     }
   },
   {
-    "id": "Isa 52:7 -> Rom 10:15",
-    "prophecyRef": "Isa 52:7 -> Rom 10:15",
+    "id": "Isa 52:7",
+    "prophecyRef": "Isa 52:7",
     "summary": {
       "prophecy": "How beautiful the feet... good news",
       "fulfillment": "Gospel preaching fulfills Isaiah's herald vision",
@@ -4864,8 +4640,8 @@
     }
   },
   {
-    "id": "Isa 54:1 -> Gal 4:27",
-    "prophecyRef": "Isa 54:1 -> Gal 4:27",
+    "id": "Isa 54:1",
+    "prophecyRef": "Isa 54:1",
     "summary": {
       "prophecy": "Rejoice, O barren (Jerusalem above)",
       "fulfillment": "Fruitfulness of the new covenant community",
@@ -4896,8 +4672,8 @@
     }
   },
   {
-    "id": "Isa 57:19 -> Eph 2:17",
-    "prophecyRef": "Isa 57:19 -> Eph 2:17",
+    "id": "Isa 57:19",
+    "prophecyRef": "Isa 57:19",
     "summary": {
       "prophecy": "He came and preached peace to you far and near",
       "fulfillment": "Christ's peace to Jew and Gentile",
@@ -4928,8 +4704,8 @@
     }
   },
   {
-    "id": "Isa 59:20-21; Jer 31:33 -> Rom 11:26-27",
-    "prophecyRef": "Isa 59:20-21; Jer 31:33 -> Rom 11:26-27",
+    "id": "Isa 59:20-21; Jer 31:33",
+    "prophecyRef": "Isa 59:20-21; Jer 31:33",
     "summary": {
       "prophecy": "The Deliverer will come from Zion (new covenant blessings)",
       "fulfillment": "Covenant mercy in Christ; fullness still unfolding",
@@ -4960,8 +4736,8 @@
     }
   },
   {
-    "id": "Isa 65:1-2 -> Rom 10:20-21",
-    "prophecyRef": "Isa 65:1-2 -> Rom 10:20-21",
+    "id": "Isa 65:1-2",
+    "prophecyRef": "Isa 65:1-2",
     "summary": {
       "prophecy": "I was found by those who did not seek Me; all day long I stretched out My hands",
       "fulfillment": "Gentile reception and Israel's stubbornness acknowledged",
@@ -4992,8 +4768,8 @@
     }
   },
   {
-    "id": "Isa 8:14 -> 1 Pet 2:8",
-    "prophecyRef": "Isa 8:14 -> 1 Pet 2:8",
+    "id": "Isa 8:14",
+    "prophecyRef": "Isa 8:14",
     "summary": {
       "prophecy": "A stone of stumbling and a rock of offense",
       "fulfillment": "Unbelievers stumble at the word",
@@ -5024,8 +4800,8 @@
     }
   },
   {
-    "id": "Isa 8:14; 28:16 -> Rom 9:33; 10:11",
-    "prophecyRef": "Isa 8:14; 28:16 -> Rom 9:33; 10:11",
+    "id": "Isa 8:14; 28:16",
+    "prophecyRef": "Isa 8:14; 28:16",
     "summary": {
       "prophecy": "Behold, I lay in Zion a stumbling stone, and whoever believes will not be put to shame",
       "fulfillment": "Christ as cornerstone/stumbling stone; faith brings salvation",
@@ -5056,8 +4832,8 @@
     }
   },
   {
-    "id": "Joel 2:32 -> Rom 10:13",
-    "prophecyRef": "Joel 2:32 -> Rom 10:13",
+    "id": "Joel 2:32",
+    "prophecyRef": "Joel 2:32",
     "summary": {
       "prophecy": "Everyone who calls on the name of the LORD shall be saved",
       "fulfillment": "Universal offer of salvation realized in the Gospel",
@@ -5088,8 +4864,8 @@
     }
   },
   {
-    "id": "Ps 118:22 -> 1 Pet 2:7",
-    "prophecyRef": "Ps 118:22 -> 1 Pet 2:7",
+    "id": "Ps 118:22",
+    "prophecyRef": "Ps 118:22",
     "summary": {
       "prophecy": "The stone the builders rejected has become the cornerstone",
       "fulfillment": "Christ exalted after rejection",
@@ -5120,8 +4896,8 @@
     }
   },
   {
-    "id": "Ps 18:49; Deut 32:43; Ps 117:1; Isa 11:10 -> Rom 15:9-12",
-    "prophecyRef": "Ps 18:49; Deut 32:43; Ps 117:1; Isa 11:10 -> Rom 15:9-12",
+    "id": "Ps 18:49; Deut 32:43; Ps 117:1; Isa 11:10",
+    "prophecyRef": "Ps 18:49; Deut 32:43; Ps 117:1; Isa 11:10",
     "summary": {
       "prophecy": "Gentiles glorify God for mercy; nations rejoice; Root of Jesse rises to rule Gentiles",
       "fulfillment": "Global worship of the Messiah underway",
@@ -5152,8 +4928,8 @@
     }
   },
   {
-    "id": "Ps 19:4 -> Rom 10:18",
-    "prophecyRef": "Ps 19:4 -> Rom 10:18",
+    "id": "Ps 19:4",
+    "prophecyRef": "Ps 19:4",
     "summary": {
       "prophecy": "Their voice has gone out to all the earth",
       "fulfillment": "Worldwide proclamation likened to cosmic witness",
@@ -5184,8 +4960,8 @@
     }
   },
   {
-    "id": "Ps 68:18 -> Eph 4:8",
-    "prophecyRef": "Ps 68:18 -> Eph 4:8",
+    "id": "Ps 68:18",
+    "prophecyRef": "Ps 68:18",
     "summary": {
       "prophecy": "When He ascended on high He led captivity captive and gave gifts to men",
       "fulfillment": "Ascension and distribution of ministerial gifts",
@@ -5248,8 +5024,8 @@
     }
   },
   {
-    "id": "2 Sam 7:14 -> Heb 1:5",
-    "prophecyRef": "2 Sam 7:14 -> Heb 1:5",
+    "id": "2 Sam 7:14",
+    "prophecyRef": "2 Sam 7:14",
     "summary": {
       "prophecy": "I will be to Him a Father, He shall be to Me a Son",
       "fulfillment": "Davidic Sonship realized in Christ",
@@ -5280,8 +5056,8 @@
     }
   },
   {
-    "id": "Deut 32:43 (LXX) -> Heb 1:6",
-    "prophecyRef": "Deut 32:43 (LXX) -> Heb 1:6",
+    "id": "Deut 32:43",
+    "prophecyRef": "Deut 32:43",
     "summary": {
       "prophecy": "Let all God's angels worship Him",
       "fulfillment": "Heavenly worship of the Son",
@@ -5312,8 +5088,8 @@
     }
   },
   {
-    "id": "Hag 2:6 -> Heb 12:26-28",
-    "prophecyRef": "Hag 2:6 -> Heb 12:26-28",
+    "id": "Hag 2:6",
+    "prophecyRef": "Hag 2:6",
     "summary": {
       "prophecy": "Yet once more I will shake not only the earth but also the heavens",
       "fulfillment": "Kingdom unshakable; future consummation anticipated",
@@ -5344,8 +5120,8 @@
     }
   },
   {
-    "id": "Isa 8:17-18 -> Heb 2:13",
-    "prophecyRef": "Isa 8:17-18 -> Heb 2:13",
+    "id": "Isa 8:17-18",
+    "prophecyRef": "Isa 8:17-18",
     "summary": {
       "prophecy": "Behold, I and the children God has given Me",
       "fulfillment": "Messiah identifies with the children given Him",
@@ -5376,8 +5152,8 @@
     }
   },
   {
-    "id": "Jer 31:31-34 -> Heb 8:8-13; 10:16-17",
-    "prophecyRef": "Jer 31:31-34 -> Heb 8:8-13; 10:16-17",
+    "id": "Jer 31:31-34",
+    "prophecyRef": "Jer 31:31-34",
     "summary": {
       "prophecy": "I will make a new covenant... I will put My laws in their hearts",
       "fulfillment": "New covenant established by Christ's blood",
@@ -5396,7 +5172,7 @@
     },
     "status": "",
     "fulfillment": {
-      "biblicalRef": "Heb 8-10; Luke 22:20",
+      "biblicalRef": "Heb 8:8-13; 10:16-17; Luke 22:20",
       "externalRef": {
         "en": "",
         "de": ""
@@ -5408,8 +5184,8 @@
     }
   },
   {
-    "id": "Ps 102:25-27 -> Heb 1:10-12",
-    "prophecyRef": "Ps 102:25-27 -> Heb 1:10-12",
+    "id": "Ps 102:25-27",
+    "prophecyRef": "Ps 102:25-27",
     "summary": {
       "prophecy": "You, Lord, founded the earth... You are the same",
       "fulfillment": "The Son identified with the LORD of creation",
@@ -5440,40 +5216,8 @@
     }
   },
   {
-    "id": "Ps 110:1 -> Heb 1:13",
-    "prophecyRef": "Ps 110:1 -> Heb 1:13",
-    "summary": {
-      "prophecy": "Sit at My right hand until I make Your enemies Your footstool",
-      "fulfillment": "Session of Christ; enemies being subdued",
-      "en": {
-        "prophecy": "Sit at My right hand until I make Your enemies Your footstool",
-        "fulfillment": "Session of Christ; enemies being subdued"
-      },
-      "de": {
-        "prophecy": "Setze dich zu meiner Rechten, bis ich deine Feinde zum Schemel mache",
-        "fulfillment": "Sitzung Christi; Feinde werden unterworfen"
-      }
-    },
-    "category": {
-      "en": "Hebrews",
-      "de": "Fulfilled / Ongoing"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Heb 1:13; 10:12-13",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: 33 AD onward",
-      "de": ""
-    }
-  },
-  {
-    "id": "Ps 110:4 -> Heb 5:6; 7:17",
-    "prophecyRef": "Ps 110:4 -> Heb 5:6; 7:17",
+    "id": "Ps 110:4",
+    "prophecyRef": "Ps 110:4",
     "summary": {
       "prophecy": "You are a priest forever after the order of Melchizedek",
       "fulfillment": "Christ's eternal high priesthood",
@@ -5492,7 +5236,7 @@
     },
     "status": "",
     "fulfillment": {
-      "biblicalRef": "Heb 5-7",
+      "biblicalRef": "Heb 5-7; 7:17",
       "externalRef": {
         "en": "",
         "de": ""
@@ -5504,8 +5248,8 @@
     }
   },
   {
-    "id": "Ps 22:22 -> Heb 2:12",
-    "prophecyRef": "Ps 22:22 -> Heb 2:12",
+    "id": "Ps 22:22",
+    "prophecyRef": "Ps 22:22",
     "summary": {
       "prophecy": "I will declare Your name to My brothers; in the midst of the assembly I will sing Your praise",
       "fulfillment": "Resurrection praise among God's people",
@@ -5536,8 +5280,8 @@
     }
   },
   {
-    "id": "Ps 2:7 -> Heb 1:5",
-    "prophecyRef": "Ps 2:7 -> Heb 1:5",
+    "id": "Ps 2:7",
+    "prophecyRef": "Ps 2:7",
     "summary": {
       "prophecy": "You are My Son; today I have begotten You",
       "fulfillment": "Divine Sonship openly declared",
@@ -5556,20 +5300,20 @@
     },
     "status": "",
     "fulfillment": {
-      "biblicalRef": "Heb 1:5; Acts 13:33",
+      "biblicalRef": "Heb 1:5; Acts 13:32-33",
       "externalRef": {
         "en": "",
         "de": ""
       }
     },
     "notes": {
-      "en": "Date: 33 AD onward",
+      "en": "Date: 33 AD",
       "de": ""
     }
   },
   {
-    "id": "Ps 40:6-8 (LXX) -> Heb 10:5-10",
-    "prophecyRef": "Ps 40:6-8 (LXX) -> Heb 10:5-10",
+    "id": "Ps 40:6-8",
+    "prophecyRef": "Ps 40:6-8",
     "summary": {
       "prophecy": "A body You prepared for Me; I have come to do Your will",
       "fulfillment": "Incarnation and obedient sacrifice of Christ",
@@ -5600,8 +5344,8 @@
     }
   },
   {
-    "id": "Ps 45:6-7 -> Heb 1:8-9",
-    "prophecyRef": "Ps 45:6-7 -> Heb 1:8-9",
+    "id": "Ps 45:6-7",
+    "prophecyRef": "Ps 45:6-7",
     "summary": {
       "prophecy": "Your throne, O God, is forever and ever",
       "fulfillment": "Messiah's righteous eternal throne",
@@ -5632,8 +5376,8 @@
     }
   },
   {
-    "id": "Ps 8:4-6 -> Heb 2:6-9",
-    "prophecyRef": "Ps 8:4-6 -> Heb 2:6-9",
+    "id": "Ps 8:4-6",
+    "prophecyRef": "Ps 8:4-6",
     "summary": {
       "prophecy": "What is man... crowned with glory and honor",
       "fulfillment": "Jesus crowned with glory, restoring human vocation",
@@ -5664,8 +5408,8 @@
     }
   },
   {
-    "id": "Ps 95:7-11 -> Heb 3:7-4:11",
-    "prophecyRef": "Ps 95:7-11 -> Heb 3:7-4:11",
+    "id": "Ps 95:7-11",
+    "prophecyRef": "Ps 95:7-11",
     "summary": {
       "prophecy": "Today, if you hear His voice... (Sabbath rest theme)",
       "fulfillment": "Believers enter God's rest through faith; promise still open",
@@ -5684,7 +5428,7 @@
     },
     "status": "",
     "fulfillment": {
-      "biblicalRef": "Heb 4:1-11",
+      "biblicalRef": "Heb Heb 3:7-4:11",
       "externalRef": {
         "en": "",
         "de": ""
@@ -5696,8 +5440,8 @@
     }
   },
   {
-    "id": "Gen 49:9-10; Isa 11:1,10 -> Rev 5:5",
-    "prophecyRef": "Gen 49:9-10; Isa 11:1,10 -> Rev 5:5",
+    "id": "Gen 49:9-10; Isa 11:1,10",
+    "prophecyRef": "Gen 49:9-10; Isa 11:1,10",
     "summary": {
       "prophecy": "The Lion of the tribe of Judah, the Root of David",
       "fulfillment": "Messianic titles realized in Jesus the Lamb",
@@ -5717,38 +5461,6 @@
     "status": "",
     "fulfillment": {
       "biblicalRef": "Rev 5:5",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: 1st c. AD onward",
-      "de": ""
-    }
-  },
-  {
-    "id": "Zech 12:10 -> Rev 1:7",
-    "prophecyRef": "Zech 12:10 -> Rev 1:7",
-    "summary": {
-      "prophecy": "They will look on Him whom they pierced",
-      "fulfillment": "Christ's piercing acknowledged; global recognition unfolds",
-      "en": {
-        "prophecy": "They will look on Him whom they pierced",
-        "fulfillment": "Christ's piercing acknowledged; global recognition unfolds"
-      },
-      "de": {
-        "prophecy": "Sie werden auf den blicken, den sie durchbohrt haben",
-        "fulfillment": "Durchbohrung Christi anerkannt; weltweite Erkenntnis wächst"
-      }
-    },
-    "category": {
-      "en": "Revelation",
-      "de": "Partial / Ongoing"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Rev 1:7; John 19:37",
       "externalRef": {
         "en": "",
         "de": ""
@@ -5984,8 +5696,8 @@
     }
   },
   {
-    "id": "Dan 9:25 (context of restoration promises)",
-    "prophecyRef": "Dan 9:25 (context of restoration promises)",
+    "id": "Dan 9:25",
+    "prophecyRef": "Dan 9:25",
     "summary": {
       "prophecy": "Jerusalem's walls rebuilt in troubled times",
       "fulfillment": "Walls rebuilt under Nehemiah amid opposition",
@@ -6144,8 +5856,8 @@
     }
   },
   {
-    "id": "Exod 12:46; Ps 34:20 -> John 19:36",
-    "prophecyRef": "Exod 12:46; Ps 34:20 -> John 19:36",
+    "id": "Exod 12:46; Ps 34:20",
+    "prophecyRef": "Exod 12:46; Ps 34:20",
     "summary": {
       "prophecy": "Not one bone will be broken",
       "fulfillment": "Legs not broken on the cross",
@@ -6176,8 +5888,8 @@
     }
   },
   {
-    "id": "Isa 53:12 -> Luke 22:37",
-    "prophecyRef": "Isa 53:12 -> Luke 22:37",
+    "id": "Isa 53:12",
+    "prophecyRef": "Isa 53:12",
     "summary": {
       "prophecy": "He was counted with the transgressors",
       "fulfillment": "Crucified between two criminals",
@@ -6196,7 +5908,7 @@
     },
     "status": "",
     "fulfillment": {
-      "biblicalRef": "Luke 23:32-33",
+      "biblicalRef": "Luke 23:32-33; Luke 22:37",
       "externalRef": {
         "en": "",
         "de": ""
@@ -6208,8 +5920,8 @@
     }
   },
   {
-    "id": "Isa 53:4 -> Matt 8:16-17",
-    "prophecyRef": "Isa 53:4 -> Matt 8:16-17",
+    "id": "Isa 53:4",
+    "prophecyRef": "Isa 53:4",
     "summary": {
       "prophecy": "He took our infirmities and bore our sicknesses",
       "fulfillment": "Jesus' healing ministry fulfills Isaiah's servant song",
@@ -6240,8 +5952,8 @@
     }
   },
   {
-    "id": "Isa 53:9 -> Matt 27:57-60",
-    "prophecyRef": "Isa 53:9 -> Matt 27:57-60",
+    "id": "Isa 53:9",
+    "prophecyRef": "Isa 53:9",
     "summary": {
       "prophecy": "Buried with the rich",
       "fulfillment": "Laid in Joseph of Arimathea's tomb",
@@ -6272,72 +5984,8 @@
     }
   },
   {
-    "id": "Isa 7:14 -> Matt 1:22-23",
-    "prophecyRef": "Isa 7:14 -> Matt 1:22-23",
-    "summary": {
-      "prophecy": "Virgin birth fulfillment statement",
-      "fulfillment": "Matthew's explicit 'that it might be fulfilled' formula",
-      "en": {
-        "prophecy": "Virgin birth fulfillment statement",
-        "fulfillment": "Matthew's explicit 'that it might be fulfilled' formula"
-      },
-      "de": {
-        "prophecy": "Erfüllungsaussage zur Jungfrauengeburt",
-        "fulfillment": "Matthäus' ausdrückliche Formel 'damit erfüllt würde'"
-      }
-    },
-    "category": {
-      "en": "NT Fulfillment",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Matt 1:22-23",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: c. 5-4 BC",
-      "de": ""
-    }
-  },
-  {
-    "id": "Isa 9:1-2 -> Matt 4:14-16",
-    "prophecyRef": "Isa 9:1-2 -> Matt 4:14-16",
-    "summary": {
-      "prophecy": "Galilee of the Gentiles quotation",
-      "fulfillment": "Ministry base in Capernaum by the sea",
-      "en": {
-        "prophecy": "Galilee of the Gentiles quotation",
-        "fulfillment": "Ministry base in Capernaum by the sea"
-      },
-      "de": {
-        "prophecy": "Zitat 'Galiläa der Heiden'",
-        "fulfillment": "Dienstbasis in Kapernaum am See"
-      }
-    },
-    "category": {
-      "en": "NT Fulfillment",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Matt 4:13-16",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: c. 27-30 AD",
-      "de": ""
-    }
-  },
-  {
-    "id": "Jer 31:15 -> Matt 2:17-18",
-    "prophecyRef": "Jer 31:15 -> Matt 2:17-18",
+    "id": "Jer 31:15",
+    "prophecyRef": "Jer 31:15",
     "summary": {
       "prophecy": "Massacre of the infants linked to Jeremiah",
       "fulfillment": "Rachel weeping applied to Herod's slaughter",
@@ -6368,40 +6016,8 @@
     }
   },
   {
-    "id": "Mic 5:2 -> Matt 2:5-6",
-    "prophecyRef": "Mic 5:2 -> Matt 2:5-6",
-    "summary": {
-      "prophecy": "Bethlehem prophecy citation",
-      "fulfillment": "Chief priests quote Micah regarding Messiah's birthplace",
-      "en": {
-        "prophecy": "Bethlehem prophecy citation",
-        "fulfillment": "Chief priests quote Micah regarding Messiah's birthplace"
-      },
-      "de": {
-        "prophecy": "Bethlehem-Prophetie-Zitat",
-        "fulfillment": "Hohepriester zitieren Micha zum Geburtsort des Messias"
-      }
-    },
-    "category": {
-      "en": "NT Fulfillment",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Matt 2:5-6",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: c. 5-4 BC",
-      "de": ""
-    }
-  },
-  {
-    "id": "Prophetic theme (Isa 11:1 'netser' and others) -> Matt 2:23",
-    "prophecyRef": "Prophetic theme (Isa 11:1 'netser' and others) -> Matt 2:23",
+    "id": "Isa 11:1",
+    "prophecyRef": "Isa 11:1",
     "summary": {
       "prophecy": "Nazarene theme ('He shall be called a Nazarene')",
       "fulfillment": "Jesus dwelling in Nazareth fulfills prophetic expectation",
@@ -6432,40 +6048,8 @@
     }
   },
   {
-    "id": "Ps 110:1 -> Acts 2:34-36; Heb 1:13",
-    "prophecyRef": "Ps 110:1 -> Acts 2:34-36; Heb 1:13",
-    "summary": {
-      "prophecy": "Ascension and exaltation (sit at My right hand)",
-      "fulfillment": "Christ seated at God's right hand",
-      "en": {
-        "prophecy": "Ascension and exaltation (sit at My right hand)",
-        "fulfillment": "Christ seated at God's right hand"
-      },
-      "de": {
-        "prophecy": "Himmelfahrt und Erhöhung (sitze zu meiner Rechten)",
-        "fulfillment": "Christus sitzt zur Rechten Gottes"
-      }
-    },
-    "category": {
-      "en": "NT Fulfillment",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Acts 2:34-36; Heb 1:13",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: 33 AD onward",
-      "de": ""
-    }
-  },
-  {
-    "id": "Ps 22:18 -> John 19:23-24",
-    "prophecyRef": "Ps 22:18 -> John 19:23-24",
+    "id": "Ps 22:18",
+    "prophecyRef": "Ps 22:18",
     "summary": {
       "prophecy": "They divided my garments among them",
       "fulfillment": "Casting lots for Jesus' tunic",
@@ -6496,8 +6080,8 @@
     }
   },
   {
-    "id": "Ps 35:19; 69:4 -> John 15:25",
-    "prophecyRef": "Ps 35:19; 69:4 -> John 15:25",
+    "id": "Ps 35:19; 69:4",
+    "prophecyRef": "Ps 35:19; 69:4",
     "summary": {
       "prophecy": "They hated me without cause",
       "fulfillment": "Opposition to Jesus fulfills the Psalms",
@@ -6528,8 +6112,8 @@
     }
   },
   {
-    "id": "Ps 78:2 -> Matt 13:34-35",
-    "prophecyRef": "Ps 78:2 -> Matt 13:34-35",
+    "id": "Ps 78:2",
+    "prophecyRef": "Ps 78:2",
     "summary": {
       "prophecy": "Parables fulfill 'I will open my mouth in parables'",
       "fulfillment": "Teaching in parables as prophetic fulfillment",
@@ -6556,70 +6140,6 @@
     },
     "notes": {
       "en": "Date: c. 27-30 AD",
-      "de": ""
-    }
-  },
-  {
-    "id": "Zech 12:10 -> John 19:36-37",
-    "prophecyRef": "Zech 12:10 -> John 19:36-37",
-    "summary": {
-      "prophecy": "They shall look on Him whom they pierced",
-      "fulfillment": "Soldier pierces Jesus' side; Scripture fulfilled",
-      "en": {
-        "prophecy": "They shall look on Him whom they pierced",
-        "fulfillment": "Soldier pierces Jesus' side; Scripture fulfilled"
-      },
-      "de": {
-        "prophecy": "Sie werden auf den sehen, den sie durchbohrt haben",
-        "fulfillment": "Soldat öffnet Jesu Seite; Schrift erfüllt"
-      }
-    },
-    "category": {
-      "en": "NT Fulfillment",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "John 19:36-37",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: c. 30-33 AD",
-      "de": ""
-    }
-  },
-  {
-    "id": "Zech 9:9 -> Matt 21:4-5",
-    "prophecyRef": "Zech 9:9 -> Matt 21:4-5",
-    "summary": {
-      "prophecy": "Entry on a donkey fulfills Zechariah",
-      "fulfillment": "Triumphal entry actions done to fulfill Scripture",
-      "en": {
-        "prophecy": "Entry on a donkey fulfills Zechariah",
-        "fulfillment": "Triumphal entry actions done to fulfill Scripture"
-      },
-      "de": {
-        "prophecy": "Einzug auf einem Esel erfüllt Sacharja",
-        "fulfillment": "Einzugs-Handlungen zur Schrift-Erfüllung"
-      }
-    },
-    "category": {
-      "en": "NT Fulfillment",
-      "de": "Fulfilled"
-    },
-    "status": "",
-    "fulfillment": {
-      "biblicalRef": "Matt 21:4-5",
-      "externalRef": {
-        "en": "",
-        "de": ""
-      }
-    },
-    "notes": {
-      "en": "Date: c. 30 AD",
       "de": ""
     }
   },
