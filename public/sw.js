@@ -1,5 +1,5 @@
-// Enhanced service worker: versioned cache, network-first for HTML, update messaging
-const BUILD = '2025-08-23T1'; // bump this (or inject at build) each deploy to force update
+// Enhanced service worker: versioned cache, network-first for HTML, update messaging, offline datasets
+const BUILD = '2025-08-24T1'; // bump this (or inject at build) each deploy to force update
 const CACHE = 'brss-cache-' + BUILD;
 // Derive base path from SW scope (works on GitHub Pages subpaths)
 const BASE = (() => {
@@ -10,7 +10,9 @@ const APP_SHELL = [
   `${BASE}`,
   `${BASE}index.html`,
   `${BASE}favicon.svg`,
-  `${BASE}manifest.webmanifest`
+  `${BASE}manifest.webmanifest`,
+  // Static prophecy dataset so Prophecy mode works fully offline after first visit.
+  `${BASE}prophecies.json`
 ];
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
