@@ -3328,11 +3328,12 @@ export default function BibleApp(){
               { title: 'Prophecy', refs: prophecyRefs },
               { title: 'Fulfillment', refs: fulfillRefs }
             ].filter(g=> g.refs.length);
-            const isGerman = (versions.find(v=> v.abbreviation===version)?.language||'').toLowerCase().startsWith('de');
+            const isGerman = (versions.find(v=> v.abbreviation===version)?.language||'').toLowerCase().startsWith('de'); // bible text language
+            const summaryIsGerman = prophecyLang === 'de';
             let overview='';
             let prophecyTxt=''; let fulfillmentTxt='';
             if(p.summary){
-              const langBlock = isGerman ? p.summary.de || p.summary.en : p.summary.en || p.summary.de;
+              const langBlock = summaryIsGerman ? (p.summary.de || p.summary.en) : (p.summary.en || p.summary.de);
               prophecyTxt = (langBlock && langBlock.prophecy) || p.summary.prophecy || '';
               fulfillmentTxt = (langBlock && langBlock.fulfillment) || p.summary.fulfillment || '';
             }
@@ -3342,7 +3343,7 @@ export default function BibleApp(){
                 {prophecyTxt && (
                   <div className="mb-4 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                     <div className="flex items-center gap-2 mb-1 text-[10px] font-semibold tracking-wide text-amber-600 dark:text-amber-400">
-                      <span className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true" /> Prophecy Summary
+                      <span className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true" /> {summaryIsGerman ? 'Prophezeiung Zusammenfassung' : 'Prophecy Summary'}
                     </div>
                     <div className="pl-2 border-l-2 border-amber-500/60 dark:border-amber-400/60 text-slate-600 dark:text-slate-300">{prophecyTxt}</div>
                   </div>
@@ -3362,7 +3363,7 @@ export default function BibleApp(){
                 {fulfillmentTxt && (
                   <div className="mb-4 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                     <div className="flex items-center gap-2 mb-1 text-[10px] font-semibold tracking-wide text-emerald-600 dark:text-emerald-400">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true" /> Fulfillment Summary
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true" /> {summaryIsGerman ? 'Erfüllung Zusammenfassung' : 'Fulfillment Summary'}
                     </div>
                     <div className="pl-2 border-l-2 border-emerald-500/60 dark:border-emerald-400/60 text-slate-600 dark:text-slate-300">{fulfillmentTxt}</div>
                   </div>
