@@ -469,15 +469,25 @@ export default function BibleApp(){
     if(!searchObjLocal) return true;
     const hay = [
       p.prophecyRef,
+      // Top-level (legacy / English default) summaries
       p.summary && p.summary.prophecy,
       p.summary && p.summary.fulfillment,
+      // Nested language summaries
+      p.summary && p.summary.en && p.summary.en.prophecy,
+      p.summary && p.summary.en && p.summary.en.fulfillment,
+      p.summary && p.summary.de && p.summary.de.prophecy,
+      p.summary && p.summary.de && p.summary.de.fulfillment,
+      // Refs & external
       p.fulfillment && p.fulfillment.biblicalRef,
       p.fulfillment && p.fulfillment.externalRef && p.fulfillment.externalRef.en,
       p.fulfillment && p.fulfillment.externalRef && p.fulfillment.externalRef.de,
+      // Notes (both languages)
       p.notes && p.notes.en,
       p.notes && p.notes.de,
+      // Categories (both)
       p.category && p.category.en,
       p.category && p.category.de,
+      // Status
       p.status
     ].filter(Boolean).join('\n');
     if(searchObjLocal instanceof RegExp){ return searchObjLocal.test(hay); }
