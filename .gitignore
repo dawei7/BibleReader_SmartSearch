@@ -8,6 +8,16 @@ pnpm-debug.log*
 # Keep lockfile for deterministic builds
 .env*
 
+# Python / virtualenv
+venv/
+*.pyc
+__pycache__/
+
+# Excel / data working files (keep final exported JSON only)
+scripts/**/*.tmp
+scripts/**/*.bak
+scripts/output/
+
 # IDE / editor
 .vscode/
 .idea/

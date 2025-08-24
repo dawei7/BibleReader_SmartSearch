@@ -2,6 +2,8 @@
 
 Modern Bible reading & powerful multi‑mode search (All / Any / Phrase) with per‑book & per‑chapter statistics, mobile‑style controls, and verse‑by‑verse read‑aloud.
 
+Includes an experimental Prophecies & Fulfillments explorer (beta) with bilingual summaries.
+
 ## Live Demo
 
 https://dawei7.github.io/BibleReader_SmartSearch/
@@ -30,6 +32,17 @@ No TypeScript yet (pure JSX) – easy to add later.
 - Split Clear: one‑tap clear for timer and stop‑at.
 - Appearance: font size, serif/sans, line height, width, verse numbers (inline/superscript), theme (System/Light/Dark).
 - Save defaults: save current Version/Book/Chapter as your device default.
+- Prophecies & Fulfillments (beta):
+  - Color‑coded legend (Prophecy = amber · Fulfillment = emerald) shown once globally.
+  - Dual summaries (prophecy / fulfillment) with matching colored left borders.
+  - Reference line with independently highlighted prophecy vs fulfillment references.
+  - Draft search input + Apply button: live preview count (asterisk * when draft differs) before committing.
+  - Regex / token aware highlighting of search terms inside references & summaries.
+  - Re‑ordered overlay: prophecy summary → prophecy passages → fulfillment summary → fulfillment passages for clarity.
+  - Passage modal uses a React portal to guarantee full overlay (no bleed‑through) and scroll lock.
+  - Integrated clear (×) within split search control; single global result badge.
+  - Bilingual toggle (EN / DE) for summaries, categories, notes (where provided).
+  - Disclaimer panel clarifying dataset is a work in progress (see below).
 
 ## Quick start (Users)
 
@@ -104,6 +117,66 @@ Notes:
 - You may still provide a single `public/bible.json` (array of books) as a legacy fallback.
 - Large file hosting: ensure gzip or brotli compression on production server for faster transfer.
 
+## Prophecies Dataset (Beta)
+
+File: `public/prophecies.json`
+
+Each item (example trimmed):
+
+```jsonc
+{
+  "id": 101,
+  "prophecyRef": "Deuteronomy 18:15",
+  "summary": {
+    "en": { "prophecy": "Moses foretells a Prophet like himself…", "fulfillment": "Peter applies this to Christ (Acts 3)…" },
+    "de": { "prophecy": "Mose kündigt einen Propheten wie ihn an…", "fulfillment": "Petrus bezieht dies auf Christus (Apg 3)…" }
+  },
+  "fulfillment": {
+    "biblicalRef": "Acts 3:22; Acts 7:37",
+    "externalRef": { "en": "", "de": "" }
+  },
+  "category": { "en": "Messianic", "de": "Messianisch" },
+  "status": "Fulfilled"
+}
+```
+
+Field notes:
+
+- `prophecyRef`: one or more semicolon‑separated Bible references (first segment used for quick verse extraction).
+- `summary.en|de.prophecy|fulfillment`: short overview lines displayed with colored borders.
+- `fulfillment.biblicalRef`: verses indicating fulfillment; colored separately.
+- `externalRef`: optional external / historical references (per language).
+- `category`: free‑text grouping (bilingual object or single string).
+- `status`: e.g. `Fulfilled`, `Future`, `Partial`, etc.
+
+### Prophecy Search Modes
+
+Uses the same tokenization logic as Bible search (All / Any / Phrase). While typing in the Prophecies view:
+
+1. The draft query builds a live regex.
+2. A dynamic preview count (amber badge with an asterisk) shows how many rows would match.
+3. Press Apply to commit; highlighting then renders in references + summaries.
+4. Clear (×) resets both draft & applied states.
+
+### Building / Updating prophecies.json
+
+Helper scripts reside in `scripts/`:
+
+- `importProphecies.js` / `normalizePropheciesCsv.js` – transform CSV / Excel exports.
+- `prophecies_excel_bridge.py` – bidirectional Excel bridge (see Python section below).
+- `stripProphecyMeta.js` / `convertPropheciesToOverview.js` – optional denormalization & summarization helpers.
+
+Typical flow:
+
+1. Maintain a master Excel file (`BibleProphecies.xlsm`).
+2. Run the macro buttons to export a normalized CSV/JSON.
+3. Run Node scripts to post‑process (normalization / trimming / legend fields).
+4. Place final `prophecies.json` under `public/` and commit.
+
+### Disclaimer (Displayed In‑App)
+
+The Prophecies & Fulfillments module is an **experimental prototype**. References, summaries, and linkages are still under manual review; *no guarantee of doctrinal, historical, or factual completeness or accuracy* is implied. Always verify against Scripture. Corrections and contributions are welcome while this dataset remains a work in progress.
+
 ## Getting Started
 
 1. Install dependencies:
@@ -126,6 +199,25 @@ npm run dev
 npm run build
 npm run preview
 ```
+
+### Python helper scripts (Excel ↔ JSON)
+
+If you plan to use the Excel import/export bridge (`scripts/prophecies_excel_bridge.py`):
+
+```bash
+python -m venv venv
+venv\Scripts\activate    # Windows PowerShell / CMD
+pip install -r requirements-dev.txt
+```
+
+Configure in the Excel `settings` sheet:
+
+| Argument        | Value (example)                               |
+| --------------- | --------------------------------------------- |
+| python_exe      | C:\\path\\to\\repo\\venv\\Scripts\\python.exe |
+| prophecies_json | C:\\path\\to\\repo\\public\\prophecies.json   |
+
+Buttons (macros) call the Python script with `--mode import` / `--mode export`.
 
 ## Tailwind IntelliSense
 
@@ -214,5 +306,8 @@ npm run build
 - Server‑side and CDN caching for very large datasets.
 - Better mobile install banners and offline strategy.
 - Additional translations via optional packs.
+- Extended in‑text highlighting in prophecy passage modal.
+- Offline caching of prophecies dataset & version diffing.
+- Worker offload for prophecy filtering on very large sets.
 
 Enjoy & God bless! ✨

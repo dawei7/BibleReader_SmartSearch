@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 // Tiny inline SVG icons (stroke-based, inherit currentColor)
 const Icon = {
   Read: (props)=> (
@@ -79,6 +80,16 @@ const Icon = {
       {/* Backspace/Clear key with X */}
       <path d="M20 7H9l-5 5 5 5h11a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
       <path d="M12 10l4 4m0-4l-4 4" />
+    </svg>
+  ),
+  Prophecy: (props)=> (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      {/* Open book */}
+      <path d="M12 18c-1.25-1.05-2.7-1.55-4.6-1.55H6A2 2 0 0 1 4 14.5v-9A1.5 1.5 0 0 1 5.5 4H11a1 1 0 0 1 1 1v13z"/>
+      <path d="M12 18c1.25-1.05 2.7-1.55 4.6-1.55H18a2 2 0 0 0 2-2V5.5A1.5 1.5 0 0 0 18.5 4H13a1 1 0 0 0-1 1v13z"/>
+      {/* Even larger magnifying glass overlapping book */}
+      <circle cx="15.5" cy="14.5" r="5.2"/>
+      <path d="M18.9 17.9l3.1 3.1"/>
     </svg>
   ),
 };
@@ -180,6 +191,142 @@ function highlightText(text, regexOrObj){
   return parts.length? parts : text;
 }
 
+// Tabbed prophecy card component
+function ProphecyCard({ p, versions, version, extractVersesFromRef, isGerman, openPassages, highlight }) {
+  // Support both legacy flat fields and new hierarchical schema.
+  function splitRefs(refStr){
+    if(!refStr) return [];
+    const raw = refStr.split(/\s*;\s*/).filter(Boolean);
+    const out=[]; let lastBook='';
+    for(const partRaw of raw){
+      let part=partRaw.trim();
+      const m = part.match(/^([1-3]?\s*[A-Za-z]+(?:\s+[A-Za-z]+)*)\s+\d/);
+      if(m){ lastBook=m[1]; }
+      else if(/^\d+:\d/.test(part) && lastBook){ part = lastBook+" "+part; }
+      out.push(part);
+    }
+    return out;
+  }
+  const prophecyRefStr = p.prophecyRef || '';
+  const fulfillmentRefStr = (p.fulfillment && p.fulfillment.biblicalRef) || '';
+  const prophecyRefs = splitRefs(prophecyRefStr);
+  const fulfillRefs = splitRefs(fulfillmentRefStr);
+  const prophecyRefsDisplay = prophecyRefs.join('; ');
+  const fulfillRefsDisplay = fulfillRefs.length? fulfillRefs.join('; ') : '';
+  const combinedRef = fulfillRefsDisplay? { prophecy: prophecyRefsDisplay, fulfillment: fulfillRefsDisplay } : { prophecy: prophecyRefsDisplay };
+  // Overview: new schema uses summary.{prophecy,fulfillment}
+  const overviewParts = [];
+  let prophecyTxt = '';
+  let fulfillmentTxt = '';
+  if(p.summary){
+    const langBlock = isGerman ? p.summary.de || p.summary.en : p.summary.en || p.summary.de;
+    prophecyTxt = (langBlock && langBlock.prophecy) || p.summary.prophecy || '';
+    fulfillmentTxt = (langBlock && langBlock.fulfillment) || p.summary.fulfillment || '';
+    if(prophecyTxt) overviewParts.push(prophecyTxt);
+    if(fulfillmentTxt) overviewParts.push(fulfillmentTxt);
+  }
+  const overview = overviewParts.length ? true : false; // presence flag
+  // Category label: could be string or {en,de}
+  let categoryLabel='';
+  if(p.category && typeof p.category==='object'){
+    categoryLabel = isGerman ? (p.category.de || p.category.en || '') : (p.category.en || p.category.de || '');
+  }
+  const status = p.status || '';
+  return (
+    <li className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
+        <button
+          type="button"
+          onClick={()=> openPassages(p)}
+          className="group relative flex items-center justify-center h-9 w-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900 transition transform hover:scale-110"
+          title={isGerman? 'Passagen öffnen':'Open passages'}
+        >
+          <Icon.Prophecy className="h-6 w-6" />
+          <span className="sr-only">{isGerman? 'Passagen öffnen':'Open passages'}</span>
+        </button>
+        <span className="text-sm font-semibold select-text flex flex-wrap items-center gap-1">
+          <span className="text-amber-600 dark:text-amber-400">{highlight? highlightText(combinedRef.prophecy, highlight): combinedRef.prophecy}</span>
+          {combinedRef.fulfillment && <span className="text-slate-400 dark:text-slate-500">—</span>}
+          {combinedRef.fulfillment && <span className="text-emerald-600 dark:text-emerald-400">{highlight? highlightText(combinedRef.fulfillment, highlight): combinedRef.fulfillment}</span>}
+        </span>
+        {categoryLabel && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">{categoryLabel}</span>}
+        {status && <span className={"text-xs px-2 py-0.5 rounded-full border "+(status==='Fulfilled'? 'bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300': status.includes('Partial')? 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300': status==='Future'? 'bg-sky-50 border-sky-300 text-sky-700 dark:bg-sky-900/30 dark:border-sky-700 dark:text-sky-300':'bg-slate-50 border-slate-300 text-slate-600 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300')}>{status}</span>}
+      </div>
+      {overview && (
+        <div className="text-xs leading-relaxed text-slate-600 dark:text-slate-400 mb-0 space-y-1">
+          {prophecyTxt && (
+            <div className="pl-2 border-l-2 border-amber-500/60 dark:border-amber-400/60 text-slate-600 dark:text-slate-300">
+              {highlight? highlightText(prophecyTxt, highlight): prophecyTxt}
+            </div>
+          )}
+          {fulfillmentTxt && (
+            <div className="pl-2 border-l-2 border-emerald-500/60 dark:border-emerald-400/60 text-slate-600 dark:text-slate-300">
+              {highlight? highlightText(fulfillmentTxt, highlight): fulfillmentTxt}
+            </div>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+// Passage block with expandable long content (separate component to keep hooks order stable)
+function PassageBlock({ refStr, verseObjs, isGerman }) {
+  const [showModal, setShowModal] = useState(false);
+  const overLimit = verseObjs.length > 5;
+  const displayObjs = overLimit ? verseObjs.slice(0,5) : verseObjs;
+  useEffect(()=>{
+    // Lock background scroll when modal open
+    const original = document.documentElement.style.overflow;
+    if(showModal) document.documentElement.style.overflow='hidden';
+    return ()=> { document.documentElement.style.overflow = original; };
+  }, [showModal]);
+  return (
+    <>
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[12px] font-semibold text-indigo-600 dark:text-indigo-400">{refStr}</div>
+          {overLimit && (
+            <button onClick={()=> setShowModal(true)} className="text-[11px] px-2 py-0.5 rounded border border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30">
+              {isGerman? 'Mehr':'More'}
+            </button>
+          )}
+        </div>
+        <div className="text-[13px] leading-relaxed text-slate-700 dark:text-slate-300">
+          {displayObjs.length ? displayObjs.map(vObj=> (
+            <span key={vObj.n} className="mr-1">
+              <sup className="align-super text-[10px] font-semibold text-slate-500 dark:text-slate-400 mr-0.5">{vObj.n}</sup>
+              {vObj.text}
+            </span>
+          )) : <span className="text-slate-500 dark:text-slate-400 text-xs">(No verses extracted)</span>}
+          {overLimit && <span className="text-slate-500 dark:text-slate-400 text-xs ml-1">…</span>}
+        </div>
+      </div>
+      {showModal && createPortal(
+        <div className="fixed inset-0 z-[1000] flex flex-col w-full h-full bg-white dark:bg-slate-900" role="dialog" aria-modal="true">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+              <h3 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 truncate pr-4">{refStr}</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">{verseObjs.length} {isGerman? 'Verse':'verses'}</span>
+                <button onClick={()=> setShowModal(false)} className="text-xs px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                  {isGerman? 'Schließen':'Close'}
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4 text-[14px] leading-relaxed text-slate-700 dark:text-slate-300">
+              {verseObjs.map(vObj=> (
+                <span key={vObj.n} className="mr-1">
+                  <sup className="align-super text-[10px] font-semibold text-slate-500 dark:text-slate-400 mr-0.5">{vObj.n}</sup>
+                  {vObj.text}
+                </span>
+              ))}
+            </div>
+        </div>, document.body)
+      }
+    </>
+  );
+}
+
 // (Inline VersePicker removed; replaced by full-screen overlay)
 
 // (Verse range slider removed)
@@ -190,7 +337,19 @@ export default function BibleApp(){
   const [bible,setBible]=useState(null);
   const [version,setVersion]=useState('de_schlachter');
   const [mode,setMode]=useState('read');
+  // Prophecy section state
+  const [prophecies,setProphecies]=useState([]);
+  const [prophecyError,setProphecyError]=useState(null);
+  const [prophecySearch,setProphecySearch]=useState('');
+  const [prophecySearchDraft,setProphecySearchDraft]=useState(''); // draft input; apply commits
+  const [prophecySearchMode,setProphecySearchMode]=useState('all'); // all|any|phrase
+  const [prophecyCaseSensitive,setProphecyCaseSensitive]=useState(false);
+  const [prophecyLang,setProphecyLang]=useState('en'); // 'en' | 'de'
+  // Passages overlay
+  const [showPassages,setShowPassages]=useState(false);
+  const [activeProphecy,setActiveProphecy]=useState(null); // prophecy object
   const [bookIdx,setBookIdx]=useState(0);
+  // (Legacy passageModalCount removed; portal-based passage modals now overlay without needing global tracking)
   const [chapterIdx,setChapterIdx]=useState(0);
   const [vStart,setVStart]=useState(1);
   const [vEnd,setVEnd]=useState(0);
@@ -298,6 +457,51 @@ export default function BibleApp(){
     if(h>0) return `${h}h`;
     return `${min}m`;
   },[]);
+
+  // Build tag list from loaded prophecies
+  // (Tag system removed – no tag derivation)
+
+  const prophecySearchObj = useMemo(()=> buildSearchRegex(prophecySearch,prophecySearchMode,{caseSensitive:prophecyCaseSensitive}),[prophecySearch,prophecySearchMode,prophecyCaseSensitive]);
+  const prophecySearchDraftObj = useMemo(()=> buildSearchRegex(prophecySearchDraft,prophecySearchMode,{caseSensitive:prophecyCaseSensitive}),[prophecySearchDraft,prophecySearchMode,prophecyCaseSensitive]);
+
+  // Generic matcher that can operate on either committed or draft search objects
+  const prophecyMatchesWith = useCallback((p, searchObjLocal)=>{
+    if(!searchObjLocal) return true;
+    const hay = [
+      p.prophecyRef,
+      p.summary && p.summary.prophecy,
+      p.summary && p.summary.fulfillment,
+      p.fulfillment && p.fulfillment.biblicalRef,
+      p.fulfillment && p.fulfillment.externalRef && p.fulfillment.externalRef.en,
+      p.fulfillment && p.fulfillment.externalRef && p.fulfillment.externalRef.de,
+      p.notes && p.notes.en,
+      p.notes && p.notes.de,
+      p.category && p.category.en,
+      p.category && p.category.de,
+      p.status
+    ].filter(Boolean).join('\n');
+    if(searchObjLocal instanceof RegExp){ return searchObjLocal.test(hay); }
+    const { words, mode } = searchObjLocal;
+    if(mode==='phrase'){
+      const r = buildSearchRegex((searchObjLocal.highlight && prophecySearch) || prophecySearch,'phrase',{caseSensitive:prophecyCaseSensitive});
+      return r? (r instanceof RegExp? r.test(hay): false) : true;
+    }
+    const lcHay = prophecyCaseSensitive? hay : hay.toLowerCase();
+    const testWord=(w)=> lcHay.includes(prophecyCaseSensitive? w : w.toLowerCase());
+    if(mode==='all') return words.every(testWord);
+    return words.some(testWord);
+  },[prophecyCaseSensitive,prophecySearch]);
+
+  const prophecyMatches = useCallback((p)=> prophecyMatchesWith(p, prophecySearchObj),[prophecyMatchesWith,prophecySearchObj]);
+
+  const filteredProphecies = useMemo(()=> prophecies.filter(prophecyMatches),[prophecies,prophecyMatches]);
+  // Draft preview count (dynamic while typing). If draft empty -> all.
+  const prophecyDraftCount = useMemo(()=>{
+    if(!prophecies.length) return 0;
+    if(!prophecySearchDraftObj) return prophecies.length;
+    let c=0; for(const p of prophecies){ if(prophecyMatchesWith(p, prophecySearchDraftObj)) c++; }
+    return c;
+  },[prophecies,prophecySearchDraftObj,prophecyMatchesWith]);
   const formatCountdown = useCallback((ms)=>{
     if(!ms || ms<=0) return '0:00';
     const total = Math.ceil(ms/1000);
@@ -621,6 +825,116 @@ export default function BibleApp(){
       if(!cancelled){ setBible(SAMPLE_BIBLE); setVersion('sample'); }
     }
   })(); return ()=>{ cancelled=true; }; },[]);
+
+  // Load prophecies once (non-blocking)
+  useEffect(()=>{
+    (async()=>{
+      try {
+        const base = import.meta?.env?.BASE_URL || '/';
+        const res = await fetch(`${base}prophecies.json`, { cache:'no-cache' });
+        if(!res.ok) throw new Error('prophecies fetch');
+        const data = await res.json();
+  if(Array.isArray(data)) setProphecies(data);
+      } catch(e){ setProphecyError(String(e?.message||e)); }
+    })();
+  },[]);
+
+  // Helpers: extract verses for a reference like "Isaiah 53:1-12" using canonical order mapping
+  const CANONICAL_BOOKS = useMemo(()=>[
+    'Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'
+  ],[]);
+  function extractVersesFromRef(ref){
+    try {
+      if(!ref || !Array.isArray(bible) || !bible.length) return '';
+      // Only handle single-range refs of form "Book Name C:V-V" or "Book Name C:V" for now.
+      // For multiple refs separated by ';', take the first for brevity.
+      const first = String(ref).split(/;|,/)[0].trim();
+  // Remove trailing notes in parentheses or after semicolon-like commentary markers
+  const noteIdx = first.search(/\s\(/);
+  const coreRef = noteIdx>0 ? first.slice(0,noteIdx).trim() : first;
+  let working = coreRef;
+      const m = first.match(/^(.*?)(\d+):(\d+)(?:-(\d+))?$/); // book (may have space at end), chapter, vStart, vEnd?
+      if(!m) return '';
+      const rawBook = m[1].trim();
+      const chap = parseInt(m[2],10)-1; // zero-based
+      const vStart = parseInt(m[3],10);
+      const vEnd = m[4]? parseInt(m[4],10): vStart;
+      // Locate book index by canonical name order (assumes ordering matches JSON order)
+      // Find canonical match by startsWith (case-insensitive), else exact
+      const bookCanonIdx = CANONICAL_BOOKS.findIndex(cb=> cb.toLowerCase()===rawBook.toLowerCase() || cb.toLowerCase().startsWith(rawBook.toLowerCase()));
+      if(bookCanonIdx<0 || bookCanonIdx>=bible.length) return '';
+      const book = bible[bookCanonIdx];
+      const chapterArr = book?.chapters?.[chap];
+      if(!Array.isArray(chapterArr)) return '';
+      const start = Math.max(1, vStart);
+      const end = Math.max(start, vEnd);
+      const picked = [];
+      for(let v=start; v<=end && v<=chapterArr.length; v++){
+        const text = chapterArr[v-1];
+        if(!text) continue;
+        picked.push(text.trim());
+      }
+      return picked.join(' ');
+    } catch { return ''; }
+  }
+  // Enhanced: return array of {n,text} for numbering
+  function extractVerseObjects(ref){
+    try {
+      if(!ref || !Array.isArray(bible) || !bible.length) return [];
+      const first = String(ref).split(/;|,/)[0].trim();
+      const core = first.replace(/\s*\(.*/, '').trim();
+      // Unified pattern:
+      // 1. Book C:V-V   -> groups: book, chap, vStart, vEnd
+      // 2. Book C:V     -> book, chap, vStart
+      // 3. Book C       -> book, chap (whole chapter)
+      // 4. Book C-C2    -> book, chapStart, chapEnd (whole chapter range)
+      const unified = core.match(/^([1-3]?\s?[A-Za-z.]+(?:\s+[A-Za-z.]+)*)\s+(\d+)(?:(?::(\d+)(?:-(\d+))?)|\s*[-–—]\s*(\d+))?$/);
+      if(!unified) return [];
+      let rawBook = unified[1];
+      const chap1 = parseInt(unified[2],10);
+      const verseStart = unified[3]? parseInt(unified[3],10): null;
+      const verseEnd = unified[4]? parseInt(unified[4],10): null;
+      const chap2 = (!unified[3] && unified[5])? parseInt(unified[5],10): null; // multi-chapter when no verses part
+      // Normalize abbreviations
+      const abbrevMap = {
+        'ex':'exodus','exo':'exodus','exod':'exodus','gen':'genesis','lev':'leviticus','num':'numbers','deut':'deuteronomy','ps':'psalms','psa':'psalms','prov':'proverbs','pr':'proverbs','song':'song of solomon','cant':'song of solomon','eccl':'ecclesiastes'
+      };
+      let norm = rawBook.toLowerCase().replace(/\.$/, '');
+      norm = abbrevMap[norm] || norm;
+      const bookIdx = CANONICAL_BOOKS.findIndex(cb=> {
+        const low = cb.toLowerCase();
+        return low===norm || low.startsWith(norm) || norm.startsWith(low);
+      });
+      if(bookIdx<0 || bookIdx>=bible.length) return [];
+      const book = bible[bookIdx];
+      const out = [];
+      if(chap2){
+        for(let c=chap1; c<=chap2; c++){
+          const arr = book?.chapters?.[c-1];
+          if(!Array.isArray(arr)) continue;
+          for(let v=1; v<=arr.length; v++){
+            const t = arr[v-1]; if(!t) continue; out.push({ n: `${c}:${v}`, text: t.trim() });
+          }
+        }
+        return out;
+      }
+      const chapterArr = book?.chapters?.[chap1-1];
+      if(!Array.isArray(chapterArr)) return [];
+      if(verseStart==null){
+        // whole chapter
+        for(let v=1; v<=chapterArr.length; v++){
+          const t = chapterArr[v-1]; if(!t) continue; out.push({ n:v, text:t.trim() });
+        }
+        return out;
+      }
+      const start = Math.max(1, verseStart);
+      const end = Math.max(start, verseEnd||verseStart);
+      for(let v=start; v<=end && v<=chapterArr.length; v++){
+        const t = chapterArr[v-1]; if(!t) continue; out.push({ n:v, text:t.trim() });
+      }
+      return out;
+    } catch { return []; }
+  }
 
   // Load and persist reader settings
   useEffect(()=>{
@@ -1639,7 +1953,7 @@ export default function BibleApp(){
   let dynamicPadTop = 0; // unified layout
   return (
   <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-white via-slate-50 to-zinc-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors">
-  <header ref={headerRef} className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm border-b border-slate-200 dark:border-slate-700">
+  <header ref={headerRef} className={"sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-sm border-b border-slate-200 dark:border-slate-700"}>
   <div className="w-full px-4 py-3 flex items-center">
           <div className="flex items-center gap-3">
             <button
@@ -1652,11 +1966,11 @@ export default function BibleApp(){
               ΑΩ
             </button>
             <nav className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-        {['read','search'].map(t => (
+        {['read','search','prophecy'].map(t => (
                 <button
                   key={t}
-                  aria-label={t==='read' ? 'Read' : 'Search'}
-                  title={t==='read' ? 'Read' : 'Search'}
+                  aria-label={t==='read' ? 'Read' : t==='search' ? 'Search' : 'Prophecy'}
+                  title={t==='read' ? 'Read' : t==='search' ? 'Search' : 'Prophecy'}
                   className={classNames('px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                     // @ts-ignore existing mode
                     mode===t? 'bg-white dark:bg-slate-900 shadow border border-slate-200 dark:border-slate-600':'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white')}
@@ -1665,14 +1979,15 @@ export default function BibleApp(){
                     if(mode === 'read') {
                       const rTop = readPaneRef.current?.scrollTop || 0;
                       setReadScrollY(rTop);
-                    } else {
+                    } else if(mode === 'search') {
                       const sTop = searchPaneRef.current?.scrollTop || 0;
                       setSearchScrollY(sTop);
                     }
+                    // (prophecy mode currently has no dedicated scroll restore)
                     setMode(t);
                   }}
                 >
-                  {t==='read' ? <Icon.Read className="h-4 w-4"/> : <Icon.Search className="h-4 w-4"/>}
+                  {t==='read' ? <Icon.Read className="h-4 w-4"/> : t==='search' ? <Icon.Search className="h-4 w-4"/> : <Icon.Prophecy className="h-4 w-4"/>}
                 </button>
               ))}
             </nav>
@@ -1747,7 +2062,7 @@ export default function BibleApp(){
     )}
 
   <main
-  className="flex-1 w-full px-0 pb-0 overflow-hidden transition-[padding]"
+  className={"flex-1 w-full px-0 pb-0 overflow-hidden transition-[padding] flex flex-col min-h-0"}
   style={{ paddingTop: 0 }}
       >
   {showAbout && (
@@ -2383,6 +2698,102 @@ export default function BibleApp(){
       </motion.div>
     </div>
         </section>
+        {mode==='prophecy' && (
+          <section className="flex-1 flex flex-col overflow-hidden min-h-0">
+            {/* Prophecy Nav Bar */}
+            <div className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-4 py-3 flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="text-lg sm:text-xl font-semibold tracking-tight flex items-center gap-2"><Icon.Prophecy className="h-6 w-6"/> Prophecies & Fulfillments</h2>
+                {prophecies.length>0 && (()=>{ const pending = prophecySearchDraft!==prophecySearch; return (
+                  <span
+                    className={classNames('text-xs px-2 py-0.5 rounded-full border select-none', pending? 'bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300':'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300')}
+                    title={pending? 'Preview (not applied yet). Press Apply to commit.' : 'Applied matches'}
+                  >
+                    {pending ? `${prophecyDraftCount}*` : filteredProphecies.length}/{prophecies.length}
+                  </span>
+                ); })()}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="inline-flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus-within:ring-2 focus-within:ring-indigo-500">
+                  <input value={prophecySearchDraft} onChange={e=> setProphecySearchDraft(e.target.value)} placeholder="Search text…" className="px-2 py-1 text-[12px] bg-transparent focus:outline-none min-w-[120px]"/>
+                  {prophecySearchDraft && (
+                    <button
+                      onClick={()=> { setProphecySearchDraft(''); setProphecySearch(''); }}
+                      className={classNames(
+                        'px-2 text-[11px] font-semibold border-l border-slate-300 dark:border-slate-600 focus:outline-none focus-visible:ring-2',
+                        'bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-500 focus-visible:ring-rose-400/60'
+                      )}
+                      title="Clear search"
+                      aria-label="Clear search"
+                    >×</button>
+                  )}
+                  <button
+                    onClick={()=> setProphecySearch(prophecySearchDraft)}
+                    disabled={prophecySearchDraft===prophecySearch}
+                    className={classNames('px-3 text-[11px] font-medium border-l border-slate-300 dark:border-slate-600', prophecySearchDraft===prophecySearch? 'text-slate-400 dark:text-slate-500 cursor-default':'bg-indigo-600 text-white hover:bg-indigo-700')}
+                    title="Apply search"
+                    aria-label="Apply search"
+                  >Apply</button>
+                </div>
+                <select value={prophecySearchMode} onChange={e=> setProphecySearchMode(e.target.value)} className="px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-[12px]">
+                  <option value="all">All</option>
+                  <option value="any">Any</option>
+                  <option value="phrase">Phrase</option>
+                </select>
+                <label className="inline-flex items-center gap-1 cursor-pointer select-none text-[11px] ml-1">
+                  <input type="checkbox" checked={prophecyCaseSensitive} onChange={e=> setProphecyCaseSensitive(e.target.checked)} className="h-3 w-3"/>
+                  <span>Case</span>
+                </label>
+                <div className="flex items-center gap-1 ml-2">
+                  <button onClick={()=> setProphecyLang('en')} className={classNames('px-2 py-1 rounded border text-[11px]', prophecyLang==='en'?'bg-indigo-600 border-indigo-600 text-white':'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600')}>EN</button>
+                  <button onClick={()=> setProphecyLang('de')} className={classNames('px-2 py-1 rounded border text-[11px]', prophecyLang==='de'?'bg-indigo-600 border-indigo-600 text-white':'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600')}>DE</button>
+                </div>
+                {/* Reset button removed; Clear now integrated in split control */}
+              </div>
+              {/* Legend (shown once) */}
+              <div className="flex items-center gap-4 pt-1 text-[10px] font-semibold tracking-wide">
+                <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true" />
+                  <span>Prophecy</span>
+                </div>
+                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true" />
+                  <span>Fulfillment</span>
+                </div>
+              </div>
+              {/* Disclaimer */}
+              <div className="mt-2 text-[10px] leading-relaxed text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-2">
+                {prophecyLang==='de' ? (
+                  <p><span className="font-semibold">Haftungsausschluss:</span> Dieser Bereich „Prophezeiungen & Erfüllungen“ ist ein funktionaler Prototyp. Verweise, Zusammenfassungen und Vers‑Zuordnungen werden noch geprüft. Für Vollständigkeit oder sachliche / doktrinäre Richtigkeit kann keine Garantie übernommen werden. Bitte prüfe alles selbst an der Schrift. Korrekturhinweise sind willkommen, solange die Datensammlung noch in Arbeit ist.</p>
+                ) : (
+                  <p><span className="font-semibold">Disclaimer:</span> The “Prophecies & Fulfillments” section is a functional prototype. References, summaries, and verse links are still under review and no guarantee of completeness or doctrinal / historical accuracy is made. Please verify everything against Scripture yourself. Suggestions and corrections are welcome while this dataset remains a work in progress.</p>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-scroll overscroll-contain px-4 pb-32 rounded-t-none custom-scroll" style={{scrollbarGutter:'stable', minHeight:0}}>
+              <div className={classNames(readerFontFamily==='serif'? 'font-serif':'font-sans')} style={{ fontSize: readerFontSize? `${readerFontSize}px`: undefined, lineHeight: `${lineHeightPx}px` }}>
+              {prophecyError && <div className="text-sm text-red-600 mb-4 mt-4">{prophecyError}</div>}
+              {!prophecyError && !prophecies.length && <div className="text-sm text-slate-500 mt-4">Loading…</div>}
+              <ul className="space-y-4 mt-4">
+                {filteredProphecies.map(p=> (
+                  <ProphecyCard
+                    key={p.id}
+                    p={p}
+                    versions={versions}
+                    version={version}
+                    extractVersesFromRef={extractVersesFromRef}
+                    isGerman={prophecyLang==='de'}
+                    openPassages={(pp)=>{ setActiveProphecy(pp); setShowPassages(true); }}
+                    highlight={prophecySearch? prophecySearchObj : null}
+                  />
+                ))}
+              </ul>
+              <div className="mt-8 text-[10px] text-slate-500 dark:text-slate-400">Data loaded from <code>public/prophecies.json</code>. Update via CSV import script.</div>
+              {filteredProphecies.length===0 && prophecies.length>0 && <div className="mt-8 text-sm text-slate-500">No matches. Adjust filters or search.</div>}
+            </div>
+            </div>
+          </section>
+        )}
       </main>
 
     {/* Unified bottom bar (was mobile only) */}
@@ -2609,65 +3020,84 @@ export default function BibleApp(){
                     {versionsByLanguage.map(([lang,list])=> (
                       <div key={lang} className="space-y-2">
                         <div className="text-[10px] uppercase tracking-wide font-semibold text-slate-500 dark:text-slate-400">{lang}</div>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                           {list.map(v=> {
                             const active = tempVersion===v.abbreviation;
                             return (
-                              <button key={v.abbreviation} onClick={()=> setTempVersion(v.abbreviation)} className={classNames('px-2 py-2 rounded-md border text-[11px] font-medium leading-tight', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{v.name}</button>
+                              <button
+                                key={v.abbreviation}
+                                onClick={()=> setTempVersion(v.abbreviation)}
+                                className={classNames('px-2 py-2 rounded-lg border text-[11px] font-medium text-left transition-colors', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80')}
+                                aria-pressed={active}
+                              >
+                                <div className="truncate">{v.name}</div>
+                                <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">{v.abbreviation}</div>
+                              </button>
                             );
                           })}
                         </div>
                       </div>
                     ))}
-                    {version==='sample' && (
-                      <div className="space-y-2">
-                        <div className="text-[10px] uppercase tracking-wide font-semibold text-slate-500 dark:text-slate-400">Sample</div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <button onClick={()=> setTempVersion('sample')} className={classNames('px-2 py-2 rounded-md border text-[11px] font-medium leading-tight', tempVersion==='sample'? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>Sample</button>
-                        </div>
-                      </div>
-                    )}
                   </div>
-      <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex">
-        <button onClick={applyVersionPicker} disabled={!tempVersion} className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 disabled:opacity-50">Apply</button>
-      </div>
+                  <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-2">
+                    <button onClick={()=> { setShowVersionPicker(false); if(versionPickerContext==='settings') setShowControls(false); }} className="w-1/2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm font-medium px-4 py-2.5">Cancel</button>
+                    <button onClick={applyVersionPicker} className="w-1/2 rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5">Apply</button>
+                  </div>
                 </div>
               )}
-              {/* Book Picker Overlay */}
-      {showBookPicker && (
+              {/* Book Picker Overlay (restored) */}
+              {showBookPicker && (
                 <div className="absolute inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
                   <div className="sticky top-0 px-4 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
-        <div className="text-sm font-semibold tracking-wide">{bookPickerContext==='settings' ? 'Default Book' : 'Select Book'}</div>
+                    <div className="text-sm font-semibold tracking-wide">Select Book</div>
                     <button onClick={()=> { setShowBookPicker(false); if(bookPickerContext==='settings') setShowControls(false); }} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
                   </div>
                   <div className="flex-1 overflow-y-auto px-4 py-4">
-                    <div className="grid grid-cols-6 gap-2">
-                      {(bible ?? []).map((b,i)=>{ const active=i===tempBookIdx; return (
-                        <button key={b.name+i} onClick={()=>{ setTempBookIdx(i); setTempChapterIdx(0); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border tracking-wide', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{bookAbbrev(b.name, b.abbrev)}</button>
-                      ); })}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-[11px] font-medium">
+                      {(bible||[]).map((b,idx)=>{
+                        const active = tempBookIdx===idx;
+                        const abbr = bookAbbrev(b.name, b.abbrev);
+                        return (
+                          <button
+                            key={idx}
+                            onClick={()=> setTempBookIdx(idx)}
+                            title={b.name}
+                            className={classNames('px-2 py-2 rounded-lg border text-center transition-colors', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80')}
+                            aria-pressed={active}
+                            aria-label={b.name}
+                          >
+                            <span className="font-medium tracking-wide">{abbr}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                  <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex">
-                    <button onClick={applyBookPicker} className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5">Apply</button>
+                  <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-2">
+                    <button onClick={()=> { setShowBookPicker(false); if(bookPickerContext==='settings') setShowControls(false); }} className="w-1/2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm font-medium px-4 py-2.5">Cancel</button>
+                    <button onClick={applyBookPicker} className="w-1/2 rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5">Apply</button>
                   </div>
                 </div>
               )}
-              {/* Chapter Picker Overlay */}
-      {showChapterPicker && (
+              {/* Chapter Picker Overlay (restored) */}
+              {showChapterPicker && (
                 <div className="absolute inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
                   <div className="sticky top-0 px-4 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur flex items-center justify-between">
-        <div className="text-sm font-semibold tracking-wide">{chapterPickerContext==='settings' ? 'Default Chapter' : 'Select Chapter'}</div>
+                    <div className="text-sm font-semibold tracking-wide">Select Chapter</div>
                     <button onClick={()=> { setShowChapterPicker(false); if(chapterPickerContext==='settings') setShowControls(false); }} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
                   </div>
                   <div className="flex-1 overflow-y-auto px-4 py-4">
-                    <div className="grid grid-cols-6 gap-2">
-          {Array.from({length: (chapterPickerContext==='settings' ? ((bible?.[(defaultBookIdx ?? mBookIdx)]?.chapters.length)||0) : (mChapterCount||0))}, (_,n)=> n+1).map(n=> { const active = n===tempChapterIdx+1; return (
-                        <button key={n} onClick={()=>{ setTempChapterIdx(n-1); }} className={classNames('h-10 rounded-md text-[11px] font-semibold border', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600')}>{n}</button>
-                      ); })}
+                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 text-[11px] font-medium">
+                      {Array.from({length: (bible?.[tempBookIdx]?.chapters.length)||0 }, (_,i)=> i).map(i=>{
+                        const active = tempChapterIdx===i;
+                        return (
+                          <button key={i} onClick={()=> setTempChapterIdx(i)} className={classNames('h-9 rounded-lg border flex items-center justify-center transition-colors', active? 'bg-slate-900 text-white border-slate-900 dark:bg-indigo-600 dark:border-indigo-600':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80')} aria-pressed={active}>{i+1}</button>
+                        );
+                      })}
                     </div>
                   </div>
-                  <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex">
-                    <button onClick={applyChapterPicker} className="w-full rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5">Apply</button>
+                  <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-2">
+                    <button onClick={()=> { setShowChapterPicker(false); if(chapterPickerContext==='settings') setShowControls(false); }} className="w-1/2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm font-medium px-4 py-2.5">Cancel</button>
+                    <button onClick={applyChapterPicker} className="w-1/2 rounded-xl bg-slate-900 dark:bg-indigo-600 text-white text-sm font-medium px-4 py-2.5">Apply</button>
                   </div>
                 </div>
               )}
@@ -2864,6 +3294,82 @@ export default function BibleApp(){
               );
             })}
           </div>
+        </div>
+      </div>
+    )}
+
+    {/* Prophecy Passages Overlay */}
+    {mode==='prophecy' && showPassages && activeProphecy && (
+      <div role="dialog" aria-modal="true" className="fixed inset-0 z-[70] bg-white dark:bg-slate-900 flex flex-col isolate">
+  <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
+          <div className="text-sm font-semibold tracking-wide flex items-center gap-2"><Icon.Prophecy className="h-5 w-5"/> Passages</div>
+          <button onClick={()=> { setShowPassages(false); setActiveProphecy(null); }} className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600">Close</button>
+        </div>
+  <div className="flex-1 overflow-y-auto p-4 space-y-6 text-sm">
+          {(()=>{
+            const p = activeProphecy;
+            function splitRefs(refStr){ if(!refStr) return []; const out=[]; let lastBook=''; refStr.split(/\s*;\s*/).forEach(raw=>{ let part=raw.trim(); if(!part) return; const m=part.match(/^([1-3]?\s*[A-Za-z]+(?:\s+[A-Za-z]+)*)\s+\d/); if(m){ lastBook=m[1]; } else if(/^\d+:\d/.test(part) && lastBook){ part=lastBook+" "+part; } out.push(part); }); return out; }
+            const prophecyRefs = splitRefs(p.prophecyRef);
+            const fulfillRefs = splitRefs(p.fulfillment && p.fulfillment.biblicalRef);
+            const allGroups = [
+              { title: 'Prophecy', refs: prophecyRefs },
+              { title: 'Fulfillment', refs: fulfillRefs }
+            ].filter(g=> g.refs.length);
+            const isGerman = (versions.find(v=> v.abbreviation===version)?.language||'').toLowerCase().startsWith('de');
+            let overview='';
+            let prophecyTxt=''; let fulfillmentTxt='';
+            if(p.summary){
+              const langBlock = isGerman ? p.summary.de || p.summary.en : p.summary.en || p.summary.de;
+              prophecyTxt = (langBlock && langBlock.prophecy) || p.summary.prophecy || '';
+              fulfillmentTxt = (langBlock && langBlock.fulfillment) || p.summary.fulfillment || '';
+            }
+            return (
+              <>
+                {/* Prophecy summary */}
+                {prophecyTxt && (
+                  <div className="mb-4 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    <div className="flex items-center gap-2 mb-1 text-[10px] font-semibold tracking-wide text-amber-600 dark:text-amber-400">
+                      <span className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true" /> Prophecy Summary
+                    </div>
+                    <div className="pl-2 border-l-2 border-amber-500/60 dark:border-amber-400/60 text-slate-600 dark:text-slate-300">{prophecyTxt}</div>
+                  </div>
+                )}
+                {/* Prophecy passages */}
+                {prophecyRefs.length>0 && (
+                  <div className="space-y-4 mb-8">
+                    <h3 className="flex items-center gap-2 text-[11px] uppercase tracking-wide font-semibold text-slate-500 dark:text-slate-400">
+                      <span className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true" /> Prophecy Passages
+                    </h3>
+                    {prophecyRefs.map(ref=> (
+                      <PassageBlock key={ref} refStr={ref} verseObjs={extractVerseObjects(ref)} isGerman={isGerman} />
+                    ))}
+                  </div>
+                )}
+                {/* Fulfillment summary */}
+                {fulfillmentTxt && (
+                  <div className="mb-4 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    <div className="flex items-center gap-2 mb-1 text-[10px] font-semibold tracking-wide text-emerald-600 dark:text-emerald-400">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true" /> Fulfillment Summary
+                    </div>
+                    <div className="pl-2 border-l-2 border-emerald-500/60 dark:border-emerald-400/60 text-slate-600 dark:text-slate-300">{fulfillmentTxt}</div>
+                  </div>
+                )}
+                {/* Fulfillment passages */}
+                {fulfillRefs.length>0 && (
+                  <div className="space-y-4">
+                    <h3 className="flex items-center gap-2 text-[11px] uppercase tracking-wide font-semibold text-slate-500 dark:text-slate-400">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true" /> Fulfillment Passages
+                    </h3>
+                    {fulfillRefs.map(ref=> (
+                      <PassageBlock key={ref} refStr={ref} verseObjs={extractVerseObjects(ref)} isGerman={isGerman} />
+                    ))}
+                  </div>
+                )}
+                {(!prophecyRefs.length && !fulfillRefs.length) && <div className="text-xs text-slate-500 dark:text-slate-400">No references.</div>}
+                {allGroups.length===0 && <div className="text-xs text-slate-500 dark:text-slate-400">No references.</div>}
+              </>
+            );
+          })()}
         </div>
       </div>
     )}
