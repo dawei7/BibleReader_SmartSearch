@@ -206,6 +206,66 @@ def entry_from_row(values: List[str]) -> Dict[str, Any]:
         "notes": {"en": notes_en or '', "de": notes_de or ''}
     }
 
+# --- Dynamic header aware parsing (supports removed 'id' column) ---
+
+def _read_headers(ws) -> List[str]:
+    headers: List[str] = []
+    for ci in range(1, len(COLUMNS)+1):
+        try:
+            v = ws.Cells(1, ci).Value
+        except Exception:
+            v = None
+        headers.append(str(v).strip().lower() if v is not None else '')
+    return headers
+
+HEADER_SYNONYMS = {
+    'prophecy-ref': 'prophecy_ref', 'prophecy ref': 'prophecy_ref',
+    'biblical-ref': 'biblical_ref', 'biblical ref': 'biblical_ref',
+    'summary_prophecy': 'summary_prophecy_en', 'summary_fulfillment': 'summary_fulfillment_en'
+}
+
+def _normalize_header(h: str) -> str:
+    h = h.strip().lower().replace('\n',' ').replace('\r',' ')
+    h = h.replace('-', '_')
+    return HEADER_SYNONYMS.get(h, h)
+
+def entry_from_row_headers(headers: List[str], ws, ri: int) -> Dict[str, Any]:
+    # Build map header->value (first occurrence wins)
+    norm_headers = [_normalize_header(h) for h in headers]
+    values: Dict[str, str] = {}
+    for idx, h in enumerate(norm_headers, start=1):
+        if not h:
+            continue
+        try:
+            cell_v = ws.Cells(ri, idx).Value
+        except Exception:
+            cell_v = ''
+        if cell_v is None:
+            cell_v = ''
+        # Avoid overwriting if duplicate header names
+        values.setdefault(h, str(cell_v).strip())
+    prophecy_ref = values.get('prophecy_ref') or values.get('id') or ''
+    # Summaries (language specific)
+    sp_en = values.get('summary_prophecy_en','')
+    sf_en = values.get('summary_fulfillment_en','')
+    sp_de = values.get('summary_prophecy_de','')
+    sf_de = values.get('summary_fulfillment_de','')
+    summary_obj: Dict[str, Any] = { 'prophecy': sp_en or '', 'fulfillment': sf_en or '', 'en': { 'prophecy': sp_en or '', 'fulfillment': sf_en or '' } }
+    if sp_de or sf_de:
+        summary_obj['de'] = { 'prophecy': sp_de or '', 'fulfillment': sf_de or '' }
+    return {
+        'id': prophecy_ref,
+        'prophecyRef': prophecy_ref,
+        'summary': summary_obj,
+        'category': { 'en': values.get('category_en',''), 'de': values.get('category_de','') },
+        'status': values.get('status',''),
+        'fulfillment': {
+            'biblicalRef': values.get('biblical_ref',''),
+            'externalRef': { 'en': values.get('external_ref_en',''), 'de': values.get('external_ref_de','') }
+        },
+        'notes': { 'en': values.get('notes_en',''), 'de': values.get('notes_de','') }
+    }
+
 # ------------------ Excel COM helpers ------------------
 
 
@@ -348,13 +408,22 @@ def op_export(json_path: str):
         last_row = ws.Cells(ws.Rows.Count, 1).End(-4162).Row  # fallback (xlUp = -4162)
     entries = []
     seen_prophecy_refs = {}
+    headers = _read_headers(ws)
     # Iterate over every physical row index (filtered rows may be Hidden but still processed)
     for ri in range(2, last_row+1):
-        values = [str(ws.Cells(ri, ci).Value).strip() if ws.Cells(ri, ci).Value is not None else '' for ci in range(1, len(COLUMNS)+1)]
-        # Skip completely blank rows
-        if not any(values):
+        # Determine blank row based on actual headers length
+        row_blank = True
+        for ci,_ in enumerate(headers, start=1):
+            try:
+                v = ws.Cells(ri, ci).Value
+            except Exception:
+                v = None
+            if v not in (None, ''):
+                row_blank = False
+                break
+        if row_blank:
             continue
-        entry = entry_from_row(values)
+        entry = entry_from_row_headers(headers, ws, ri)
         # Uniqueness requirement: prophecy_ref column (mirrored into id)
         pid = entry.get('prophecyRef', '') or entry.get('id','')
         if pid:
